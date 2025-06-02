@@ -32,17 +32,19 @@ A multimodal AI platform designed to support diplomats and policymakers during h
 1. Clone the repository and navigate to the project directory
 
 2. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your OpenAI API key and Supabase credentials
-```
+
+   ```bash
+   cp .env.example .env
+   # Edit .env with your OpenAI API key and Supabase credentials
+   ```
 
 3. Build and start all services:
-```bash
-make up
-# OR
-docker-compose up --build -d
-```
+
+   ```bash
+   make up
+   # OR
+   docker-compose up --build -d
+   ```
 
 4. Access the application:
    - Frontend: http://localhost:3000
@@ -50,37 +52,42 @@ docker-compose up --build -d
    - API Documentation: http://localhost:8000/docs
 
 5. View logs:
-```bash
-make logs
-# OR
-docker-compose logs -f
-```
+
+   ```bash
+   make logs
+   # OR
+   docker-compose logs -f
+   ```
 
 6. Stop services:
-```bash
-make down
-# OR
-docker-compose down
-```
+
+   ```bash
+   make down
+   # OR
+   docker-compose down
+   ```
 
 ### Local Development Setup
 
 If you prefer to run services locally:
 
 1. Install dependencies:
-```bash
-make install
-```
+
+   ```bash
+   make install
+   ```
 
 2. Start the backend:
-```bash
-cd api && python main.py
-```
+
+   ```bash
+   cd api && python main.py
+   ```
 
 3. Start the frontend:
-```bash
-cd web && npm run dev
-```
+
+   ```bash
+   cd web && npm run dev
+   ```
 
 ## Usage
 
@@ -112,6 +119,7 @@ Supported cultures include American, Japanese, German, Chinese, British, and Fre
 ## Demo Data
 
 For demonstration purposes, the platform can analyze:
+
 - Public diplomatic meeting footage
 - Sample diplomatic transcripts
 - Mock negotiation scenarios
