@@ -227,8 +227,26 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-blue-900 text-white p-4">
         <div className="container mx-auto">
-          <h1 className="text-2xl font-bold">DiploSense</h1>
-          <p className="text-blue-200">Real-Time Diplomatic Intelligence Fusion Platform</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">DiploSense</h1>
+              <p className="text-blue-200">Real-Time Diplomatic Intelligence Fusion Platform</p>
+            </div>
+            <nav className="flex gap-4">
+              <a 
+                href="/" 
+                className="px-4 py-2 bg-blue-800 rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Video Analysis
+              </a>
+              <a 
+                href="/live" 
+                className="px-4 py-2 bg-blue-700 rounded-md hover:bg-blue-600 transition-colors"
+              >
+                Live Camera
+              </a>
+            </nav>
+          </div>
           <div className="flex items-center gap-2 mt-2">
             <div className={`w-2 h-2 rounded-full ${socketState.isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
             <span className="text-sm">{socketState.isConnected ? 'Connected' : 'Disconnected'}</span>

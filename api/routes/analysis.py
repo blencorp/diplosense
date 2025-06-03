@@ -351,6 +351,49 @@ async def analyze_demo_video(request: dict):
             "timestamp": datetime.now().isoformat()
         })
 
+@router.post("/analyze/live-camera")
+async def analyze_live_camera(request: dict):
+    """Analyze live camera feed with real-time processing"""
+    try:
+        meeting_id = request.get("meeting_id", "live")
+        image_data = request.get("image_data", [])
+        timestamp = request.get("timestamp", datetime.now().isoformat())
+        
+        if not image_data:
+            raise HTTPException(status_code=400, detail="No image data provided")
+        
+        # Convert image data back to bytes
+        image_bytes = bytes(image_data)
+        
+        print(f"[LIVE CAMERA] Received frame for analysis, size: {len(image_bytes)} bytes")
+        
+        # Analyze with OpenAI
+        analysis = await openai_service.analyze_facial_expressions(image_bytes)
+        
+        # Add live metadata
+        analysis["source"] = "live_camera"
+        analysis["timestamp"] = timestamp
+        
+        # Send facial analysis update via WebSocket
+        await manager.broadcast(json.dumps({
+            "type": "facial_analysis_update",
+            "meeting_id": meeting_id,
+            "data": analysis,
+            "timestamp": timestamp
+        }))
+        
+        print(f"[LIVE CAMERA] Analysis completed and broadcasted")
+        
+        return JSONResponse(content={
+            "meeting_id": meeting_id,
+            "analysis": analysis,
+            "timestamp": timestamp
+        })
+        
+    except Exception as e:
+        print(f"Error in live camera analysis: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/demo/analyze")
 async def demo_analyze(request: dict):
     """Demo analysis using sample diplomatic meeting video"""
