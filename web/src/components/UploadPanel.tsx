@@ -29,8 +29,6 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
 }) => {
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [selectedDemoVideo, setSelectedDemoVideo] = useState<string>('')
-  const [textInput, setTextInput] = useState('')
-  const [cultures, setCultures] = useState('')
   const [loading, setLoading] = useState<Record<string, boolean>>({})
 
   const API_BASE = '/api/v1'
@@ -136,43 +134,6 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
   }
 
 
-  const handleTextAnalysis = async () => {
-    if (!textInput.trim()) return
-
-    setLoading((prev: Record<string, boolean>) => ({ ...prev, text: true }))
-
-    try {
-      const formData = new FormData()
-      formData.append('text', textInput)
-      formData.append('meeting_id', meetingId)
-      formData.append('cultures', JSON.stringify(cultures.split(',').map((c: string) => c.trim()).filter((c: string) => c)))
-
-      const response = await fetch(`${API_BASE}/analyze/text`, {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const result = await response.json()
-      onAnalysisComplete({
-        type: 'text_analysis',
-        meeting_id: meetingId,
-        data: result.analysis,
-        timestamp: new Date().toISOString()
-      })
-
-      setTextInput('')
-
-    } catch (error) {
-      console.error('Error analyzing text:', error)
-      alert('Error analyzing text. Please try again.')
-    } finally {
-      setLoading((prev: Record<string, boolean>) => ({ ...prev, text: false }))
-    }
-  }
 
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -245,34 +206,6 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
 
         </div>
 
-        {/* Text Analysis */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <FileText className="inline w-4 h-4 mr-1" />
-            Text Sentiment Analysis
-          </label>
-          <textarea
-            value={textInput}
-            onChange={(e) => setTextInput(e.target.value)}
-            placeholder="Enter transcript or meeting notes for analysis..."
-            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            rows={4}
-          />
-          <input
-            type="text"
-            value={cultures}
-            onChange={(e) => setCultures(e.target.value)}
-            placeholder="Cultural backgrounds (comma-separated, e.g., American, Japanese, German)"
-            className="w-full mt-2 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          <button
-            onClick={handleTextAnalysis}
-            disabled={!textInput.trim() || loading.text}
-            className="mt-2 w-full px-4 py-2 bg-purple-600 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-purple-700"
-          >
-            {loading.text ? 'Analyzing...' : 'Analyze Text'}
-          </button>
-        </div>
 
         {/* Live Transcript */}
         <div className="border-t pt-4">
