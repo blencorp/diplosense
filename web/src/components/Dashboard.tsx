@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts'
-import { AlertTriangle, Users, Brain, FileText } from 'lucide-react'
+import { AlertTriangle, Users, Brain, FileText, Video, Play } from 'lucide-react'
 import NoSSR from './NoSSR'
 import VideoPlayer from './VideoPlayer'
 
@@ -162,7 +162,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="space-y-6">
       {/* Video Player */}
-      {currentVideo && (
+      {currentVideo ? (
         <VideoPlayer
           videoUrl={currentVideo}
           isAnalyzing={isAnalyzing}
@@ -172,6 +172,48 @@ const Dashboard: React.FC<DashboardProps> = ({
           onPlay={onVideoPlay}
           onPause={onVideoPause}
         />
+      ) : (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+            <div className="text-center space-y-4">
+              <div className="relative">
+                <Video className="h-16 w-16 text-gray-400 mx-auto" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Play className="h-6 w-6 text-gray-500 ml-1" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-medium text-gray-600">No Video Selected</h3>
+                <p className="text-sm text-gray-500 max-w-md">
+                  Select a demo video from the left panel or upload your own video to begin real-time diplomatic analysis.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center items-center text-xs text-gray-400">
+                <span className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                  Facial Expression Analysis
+                </span>
+                <span className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                  Audio Transcription
+                </span>
+                <span className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                  Cultural Context
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="p-4 bg-gray-50 border-t">
+            <div className="flex items-center justify-between text-sm text-gray-600">
+              <span>Ready for analysis</span>
+              <span className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                Waiting for video
+              </span>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Status Cards */}
