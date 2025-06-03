@@ -35,12 +35,8 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
 
   // Demo video options
   const demoVideos = [
-    { id: 'putin', name: 'Putin UN Speech', url: '/demo-data/video/putin.mp4' },
-    { id: 'biden', name: 'Biden Israel Statement 2023', url: '/demo-data/video/biden_israel_2023.webm' },
-    { id: 'negotiation', name: 'Cross Cultural Negotiation', url: '/demo-data/video/cross_cultural_negotiation.mp4' },
-    { id: 'briefing', name: 'Press Briefing 2024', url: '/demo-data/video/press_briefing_2024.mp4' },
-    { id: 'summit', name: 'Summit Meeting 2024', url: '/demo-data/video/summit_meeting_2024.mp4' },
-    { id: 'sample', name: 'Sample Diplomatic Meeting', url: 'https://sample-videos.com/zip/10/mp4/480/sample_480p.mp4' }
+    { id: 'nebenzya', name: 'Vasily Nebenzya UN Speech', url: '/demo-data/video/ambassador-vasily-nebenzya.mp4' },
+    { id: 'putin', name: 'Putin UN Speech', url: '/demo-data/video/putin.mp4' }
   ]
 
   const handleDemoVideoSelect = (videoUrl: string) => {
