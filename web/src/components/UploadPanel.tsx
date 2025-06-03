@@ -13,15 +13,89 @@ interface AnalysisData {
 interface UploadPanelProps {
   meetingId: string
   onAnalysisComplete: (analysis: AnalysisData) => void
+  onVideoSelected?: (videoUrl: string) => void
+  onAnalysisStart?: () => void
+  onAnalysisProgress?: (progress: number) => void
 }
 
-const UploadPanel: React.FC<UploadPanelProps> = ({ meetingId, onAnalysisComplete }: UploadPanelProps) => {
+const UploadPanel: React.FC<UploadPanelProps> = ({
+  meetingId,
+  onAnalysisComplete,
+  onVideoSelected,
+  onAnalysisStart,
+  onAnalysisProgress
+}) => {
   const [videoFile, setVideoFile] = useState<File | null>(null)
+  const [selectedDemoVideo, setSelectedDemoVideo] = useState<string>('')
   const [textInput, setTextInput] = useState('')
   const [cultures, setCultures] = useState('')
   const [loading, setLoading] = useState<Record<string, boolean>>({})
 
   const API_BASE = '/api/v1'
+
+  // Demo video options
+  const demoVideos = [
+    { id: 'putin', name: 'Putin UN Speech', url: '/demo-data/video/putin.mp4' },
+    { id: 'biden', name: 'Biden Israel Statement 2023', url: '/demo-data/video/biden_israel_2023.webm' },
+    { id: 'negotiation', name: 'Cross Cultural Negotiation', url: '/demo-data/video/cross_cultural_negotiation.mp4' },
+    { id: 'briefing', name: 'Press Briefing 2024', url: '/demo-data/video/press_briefing_2024.mp4' },
+    { id: 'summit', name: 'Summit Meeting 2024', url: '/demo-data/video/summit_meeting_2024.mp4' },
+    { id: 'sample', name: 'Sample Diplomatic Meeting', url: 'https://sample-videos.com/zip/10/mp4/480/sample_480p.mp4' }
+  ]
+
+  const handleDemoVideoSelect = (videoUrl: string) => {
+    setSelectedDemoVideo(videoUrl)
+    onVideoSelected?.(videoUrl)
+  }
+
+  const handleDemoVideoAnalysis = async () => {
+    if (!selectedDemoVideo) return
+
+    setLoading((prev: Record<string, boolean>) => ({ ...prev, demoVideo: true }))
+    onAnalysisStart?.()
+
+    try {
+      // Simulate progressive analysis for demo
+      let progress = 0
+      const progressInterval = setInterval(() => {
+        progress += 0.1
+        onAnalysisProgress?.(progress)
+
+        if (progress >= 1) {
+          clearInterval(progressInterval)
+        }
+      }, 500)
+
+      // Simulate multiple analysis updates over time
+      const simulateAnalysis = async () => {
+        const totalUpdates = 5
+        for (let i = 0; i < totalUpdates; i++) {
+          await new Promise(resolve => setTimeout(resolve, 1000))
+
+          // Trigger demo video analysis that will broadcast via WebSocket
+          await fetch(`${API_BASE}/analyze/demo-video`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              meeting_id: meetingId,
+              video_source: selectedDemoVideo,
+              frame_progress: (i + 1) / totalUpdates
+            }),
+          })
+        }
+      }
+
+      await simulateAnalysis()
+
+    } catch (error) {
+      console.error('Error analyzing demo video:', error)
+      alert('Error analyzing demo video. Please try again.')
+    } finally {
+      setLoading((prev: Record<string, boolean>) => ({ ...prev, demoVideo: false }))
+    }
+  }
 
   const handleVideoUpload = async (file: File) => {
     setLoading((prev: Record<string, boolean>) => ({ ...prev, video: true }))
@@ -189,37 +263,70 @@ const UploadPanel: React.FC<UploadPanelProps> = ({ meetingId, onAnalysisComplete
       <div className="bg-white p-6 rounded-lg shadow">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload & Analysis</h2>
 
-        {/* Video Upload */}
+        {/* Video Analysis */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             <Video className="inline w-4 h-4 mr-1" />
             Video Analysis
           </label>
-          <div className="flex items-center space-x-2">
-            <input
-              type="file"
-              accept="video/*"
-              onChange={handleFileChange}
-              className="flex-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
-            />
-            <button
-              onClick={() => videoFile && handleVideoUpload(videoFile)}
-              disabled={!videoFile || loading.video}
-              className="px-4 py-2 bg-green-600 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-green-700"
+
+          {/* Demo Video Selection */}
+          <div className="mb-4">
+            <label className="block text-xs text-gray-600 mb-2">Select Demo Video</label>
+            <select
+              value={selectedDemoVideo}
+              onChange={(e) => handleDemoVideoSelect(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
             >
-              {loading.video ? 'Analyzing...' : 'Analyze'}
-            </button>
+              <option value="">Choose a demo video...</option>
+              {demoVideos.map((video) => (
+                <option key={video.id} value={video.url}>
+                  {video.name}
+                </option>
+              ))}
+            </select>
+            {selectedDemoVideo && (
+              <button
+                onClick={handleDemoVideoAnalysis}
+                disabled={loading.demoVideo}
+                className="mt-2 w-full px-4 py-2 bg-blue-600 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-700"
+              >
+                {loading.demoVideo ? 'Analyzing Video...' : 'Analyze Selected Video'}
+              </button>
+            )}
           </div>
-          <div className="mt-2">
+
+          {/* File Upload Option */}
+          <div className="border-t pt-4">
+            <label className="block text-xs text-gray-600 mb-2">Or Upload Your Own Video</label>
+            <div className="flex items-center space-x-2">
+              <input
+                type="file"
+                accept="video/*"
+                onChange={handleFileChange}
+                className="flex-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+              />
+              <button
+                onClick={() => videoFile && handleVideoUpload(videoFile)}
+                disabled={!videoFile || loading.video}
+                className="px-4 py-2 bg-green-600 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-green-700"
+              >
+                {loading.video ? 'Analyzing...' : 'Analyze'}
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Demo Button */}
+          <div className="mt-4 pt-4 border-t">
             <button
               onClick={handleDemoAnalysis}
               disabled={loading.demo}
-              className="px-3 py-1 bg-blue-500 text-white text-sm rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-600"
+              className="px-3 py-1 bg-gray-500 text-white text-sm rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-gray-600"
             >
-              {loading.demo ? 'Running Demo...' : 'Quick Demo'}
+              {loading.demo ? 'Running Demo...' : 'Quick Demo Analysis'}
             </button>
             <span className="ml-2 text-xs text-gray-500">
-              Analyze sample diplomatic meeting video
+              Run analysis without video
             </span>
           </div>
         </div>

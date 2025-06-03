@@ -27,6 +27,9 @@ export default function Home() {
   })
   const [meetingId, setMeetingId] = useState<string>('demo-meeting-1')
   const [analysisData, setAnalysisData] = useState<AnalysisData[]>([])
+  const [currentVideo, setCurrentVideo] = useState<string>('')
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false)
+  const [analysisProgress, setAnalysisProgress] = useState<number>(0)
 
   useEffect(() => {
     setMounted(true)
@@ -82,6 +85,22 @@ export default function Home() {
     setAnalysisData((prev: AnalysisData[]) => [...prev, analysis])
   }
 
+  const handleVideoSelected = (videoUrl: string) => {
+    setCurrentVideo(videoUrl)
+  }
+
+  const handleAnalysisStart = () => {
+    setIsAnalyzing(true)
+    setAnalysisProgress(0)
+  }
+
+  const handleAnalysisProgress = (progress: number) => {
+    setAnalysisProgress(progress)
+    if (progress >= 1) {
+      setIsAnalyzing(false)
+    }
+  }
+
   if (!mounted) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -112,12 +131,18 @@ export default function Home() {
             <UploadPanel
               meetingId={meetingId}
               onAnalysisComplete={handleNewAnalysis}
+              onVideoSelected={handleVideoSelected}
+              onAnalysisStart={handleAnalysisStart}
+              onAnalysisProgress={handleAnalysisProgress}
             />
           </div>
           <div className="lg:col-span-2">
             <Dashboard
               analysisData={analysisData}
               meetingId={meetingId}
+              currentVideo={currentVideo}
+              isAnalyzing={isAnalyzing}
+              analysisProgress={analysisProgress}
             />
           </div>
         </div>

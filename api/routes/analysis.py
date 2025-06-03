@@ -157,6 +157,57 @@ async def generate_cable(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/analyze/demo-video")
+async def analyze_demo_video(request: dict):
+    """Analyze demo video with progressive updates"""
+    try:
+        meeting_id = request.get("meeting_id", "demo")
+        video_source = request.get("video_source", "")
+        frame_progress = request.get("frame_progress", 0)
+        
+        # Send video analysis update
+        await manager.broadcast(json.dumps({
+            "type": "video_analysis_progress",
+            "meeting_id": meeting_id,
+            "data": {
+                "video_source": video_source,
+                "progress": frame_progress,
+                "status": "analyzing"
+            },
+            "timestamp": datetime.now().isoformat()
+        }))
+        
+        # Generate frame-specific analysis
+        frame_analysis = {
+            "frame_time": frame_progress * 30,  # Assume 30 second video
+            "emotions": [
+                {"emotion": "focused", "confidence": 0.7 + (frame_progress * 0.2)},
+                {"emotion": "tense", "confidence": 0.3 + (frame_progress * 0.3)},
+                {"emotion": "determined", "confidence": 0.6 + (frame_progress * 0.1)}
+            ],
+            "microexpressions": ["eyebrow_furrow", "lip_tightening"],
+            "overall_confidence_score": 0.75 + (frame_progress * 0.15)
+        }
+        
+        # Send facial analysis update
+        await manager.broadcast(json.dumps({
+            "type": "facial_analysis_update",
+            "meeting_id": meeting_id,
+            "data": frame_analysis,
+            "frame_progress": frame_progress,
+            "timestamp": datetime.now().isoformat()
+        }))
+        
+        return JSONResponse(content={
+            "meeting_id": meeting_id,
+            "analysis": frame_analysis,
+            "progress": frame_progress,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/demo/analyze")
 async def demo_analyze(request: dict):
     """Demo analysis using sample diplomatic meeting video"""

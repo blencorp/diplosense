@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts'
 import { AlertTriangle, Users, Brain, FileText, X, Eye } from 'lucide-react'
 import NoSSR from './NoSSR'
+import VideoPlayer from './VideoPlayer'
 
 interface AnalysisData {
   type: string
@@ -15,11 +16,22 @@ interface AnalysisData {
 interface DashboardProps {
   analysisData: AnalysisData[]
   meetingId: string
+  currentVideo?: string
+  isAnalyzing?: boolean
+  analysisProgress?: number
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ analysisData, meetingId }) => {
+const Dashboard: React.FC<DashboardProps> = ({ 
+  analysisData, 
+  meetingId, 
+  currentVideo, 
+  isAnalyzing = false, 
+  analysisProgress = 0 
+}) => {
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisData | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [videoCurrentTime, setVideoCurrentTime] = useState(0)
+  const [videoDuration, setVideoDuration] = useState(0)
 
   const openModal = (analysis: AnalysisData) => {
     console.log('Opening modal for:', analysis.type)
@@ -148,8 +160,27 @@ const Dashboard: React.FC<DashboardProps> = ({ analysisData, meetingId }) => {
     }
   }
 
+  const handleVideoTimeUpdate = (currentTime: number) => {
+    setVideoCurrentTime(currentTime)
+  }
+
+  const handleVideoLoadedData = (duration: number) => {
+    setVideoDuration(duration)
+  }
+
   return (
     <div className="space-y-6">
+      {/* Video Player */}
+      {currentVideo && (
+        <VideoPlayer
+          videoUrl={currentVideo}
+          isAnalyzing={isAnalyzing}
+          analysisProgress={analysisProgress}
+          onTimeUpdate={handleVideoTimeUpdate}
+          onLoadedData={handleVideoLoadedData}
+        />
+      )}
+
       {/* Status Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-lg shadow">
