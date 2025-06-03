@@ -34,6 +34,7 @@ const UploadPanel: React.FC<UploadPanelProps> = ({ meetingId, onAnalysisComplete
       const response = await fetch(`${API_BASE}/analyze/video`, {
         method: 'POST',
         body: formData,
+        signal: AbortSignal.timeout(120000), // 2 minute timeout
       })
 
       if (!response.ok) {
@@ -52,7 +53,11 @@ const UploadPanel: React.FC<UploadPanelProps> = ({ meetingId, onAnalysisComplete
 
     } catch (error) {
       console.error('Error uploading video:', error)
-      alert('Error uploading video. Please try again.')
+      if (error instanceof Error && error.name === 'TimeoutError') {
+        alert('Video analysis is taking longer than expected, but real-time updates will continue to appear in the dashboard.')
+      } else {
+        alert('Error uploading video. Please try again.')
+      }
     } finally {
       setLoading((prev: Record<string, boolean>) => ({ ...prev, video: false }))
     }

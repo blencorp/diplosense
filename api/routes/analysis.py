@@ -43,53 +43,61 @@ async def analyze_video(
 ):
     """Analyze video for facial expressions and microexpressions"""
     try:
-        # Read video data
         video_data = await video_file.read()
-
-        # Create a temporary file to store the video
         with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_video:
             temp_video.write(video_data)
             temp_video_path = temp_video.name
 
+        cap = None
         try:
-            # Open video file using OpenCV
             cap = cv2.VideoCapture(temp_video_path)
             if not cap.isOpened():
                 raise HTTPException(status_code=400, detail="Could not open video file")
 
-            # Extract a frame from the middle of the video
             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            if total_frames > 0:
-                # Seek to middle frame
-                cap.set(cv2.CAP_PROP_POS_FRAMES, total_frames // 2)
-                ret, frame = cap.read()
-                if ret:
-                    # Convert frame to JPEG format
-                    _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 95])
-                    analysis = await openai_service.analyze_facial_expressions(buffer.tobytes())
-                else:
-                    raise HTTPException(status_code=400, detail="Could not extract frame from video")
-            else:
-                raise HTTPException(status_code=400, detail="Video file appears to be empty")
+            frame_interval = max(1, total_frames // 10)  # Analyze up to 10 frames
 
-        finally:
-            # Clean up
+            results = []
+            for i in range(0, total_frames, frame_interval):
+                cap.set(cv2.CAP_PROP_POS_FRAMES, i)
+                ret, frame = cap.read()
+                if not ret:
+                    continue
+                _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 95])
+                analysis = await openai_service.analyze_facial_expressions(buffer.tobytes())
+                results.append({"frame": i, "analysis": analysis})
+                # Send partial result via WebSocket
+                await manager.broadcast(json.dumps({
+                    "type": "facial_analysis_update",
+                    "meeting_id": meeting_id,
+                    "data": analysis,
+                    "frame": i,
+                    "timestamp": datetime.now().isoformat()
+                }))
+                await asyncio.sleep(0.1)  # Small delay to avoid flooding
+
+            # Send final summary
+            await manager.broadcast(json.dumps({
+                "type": "facial_analysis_complete",
+                "meeting_id": meeting_id,
+                "data": results,
+                "timestamp": datetime.now().isoformat()
+            }))
+
             cap.release()
             os.unlink(temp_video_path)
 
-        # Broadcast to WebSocket clients
-        await manager.broadcast(json.dumps({
-            "type": "facial_analysis",
-            "meeting_id": meeting_id,
-            "data": analysis,
-            "timestamp": datetime.now().isoformat()
-        }))
+            return JSONResponse(content={
+                "meeting_id": meeting_id,
+                "analysis": results,
+                "timestamp": datetime.now().isoformat()
+            })
 
-        return JSONResponse(content={
-            "meeting_id": meeting_id,
-            "analysis": analysis,
-            "timestamp": datetime.now().isoformat()
-        })
+        finally:
+            if cap:
+                cap.release()
+            if os.path.exists(temp_video_path):
+                os.unlink(temp_video_path)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

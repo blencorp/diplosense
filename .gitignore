@@ -25,16 +25,40 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+package-lock.json
+yarn.lock
 
-# React build
+# Next.js
+web/.next/
+web/out/
 web/dist/
 web/build/
 
-# IDE
+# Testing
+web/coverage/
+web/test-results/
+web/playwright-report/
+web/test-results.xml
+web/junit.xml
+*.lcov
+
+# Jest
+web/jest-cache/
+
+# IDE and Editor
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+.vim/
+.sublime-*
+*.sublime-project
+*.sublime-workspace
+
+# TypeScript
+web/*.tsbuildinfo
+web/.tsbuild/
 
 # OS
 .DS_Store
@@ -43,10 +67,24 @@ Thumbs.db
 # Logs
 *.log
 logs/
+web/npm-debug.log*
+web/yarn-debug.log*
+web/yarn-error.log*
+web/.pnpm-debug.log*
 
-# Uploads
+# Uploads and temporary files
 uploads/
 temp/
+web/temp/
+web/uploads/
+*.tmp
+*.temp
+
+# Docker
+.dockerignore.bak
+docker-compose.override.yml
+docker-compose.*.yml
+!docker-compose.yml
 
 # Database
 *.db
@@ -55,3 +93,45 @@ temp/
 # API Keys and secrets
 secrets.json
 credentials.json
+*.pem
+*.key
+*.crt
+.env.*
+!.env.example
+
+# Development and debugging
+.cache/
+.parcel-cache/
+.nyc_output/
+.sass-cache/
+connect.lock
+typings/
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# System files
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Performance monitoring
+web/bundle-analyzer/
+web/lighthouse/
+web/perfbudget.json
+
+# Storybook
+web/storybook-static/
+
+# Local configuration overrides
+local.config.js
+local.config.json

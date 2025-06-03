@@ -56,7 +56,11 @@ export default function Home() {
     socket.onmessage = (event: MessageEvent) => {
       try {
         const analysisUpdate: AnalysisData = JSON.parse(event.data)
-        setAnalysisData((prev: AnalysisData[]) => [...prev, analysisUpdate])
+        let normalized = analysisUpdate
+        if (analysisUpdate.type === "facial_analysis_update") {
+          normalized = { ...analysisUpdate, type: "facial_analysis" }
+        }
+        setAnalysisData((prev: AnalysisData[]) => [...prev, normalized])
       } catch (error) {
         console.error('Error parsing WebSocket message:', error)
       }
