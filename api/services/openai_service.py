@@ -54,19 +54,22 @@ class OpenAIService:
             # Convert image to base64
             base64_image = base64.b64encode(image_data).decode('utf-8')
             
+            print(f"[OpenAI] Making facial expression analysis request to GPT-4o Vision")
+            print(f"[OpenAI] Image size: {len(image_data)} bytes")
+            
             response = self.client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an expert in facial microexpression analysis for diplomatic settings. Analyze the facial expressions in this image and identify any microexpressions that might indicate stress, deception, frustration, confidence, or other emotions relevant to negotiations. Return a JSON response with emotions (list of objects with emotion and confidence), microexpressions (list), and overall_confidence_score (0 to 1)."
+                        "content": "You are an expert in behavioral analysis for diplomatic settings. Analyze the general emotional tone and body language visible in this image without identifying any individuals. Focus on observable behavioral indicators like posture, gesture patterns, and general emotional atmosphere. Return a JSON response with emotions (list of objects with emotion and confidence), observable_behaviors (list), and overall_confidence_score (0 to 1)."
                     },
                     {
                         "role": "user",
                         "content": [
                             {
                                 "type": "text",
-                                "text": "Analyze the facial expressions and microexpressions in this diplomatic meeting image:"
+                                "text": "Analyze the general behavioral and emotional indicators in this scene without identifying any individuals:"
                             },
                             {
                                 "type": "image_url",

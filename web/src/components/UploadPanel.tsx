@@ -46,54 +46,6 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
     setLoading((prev: Record<string, boolean>) => ({ ...prev, demoVideo: false }))
   }
 
-  const handleDemoVideoAnalysis = async () => {
-    if (!selectedDemoVideo) return
-
-    setLoading((prev: Record<string, boolean>) => ({ ...prev, demoVideo: true }))
-    onAnalysisStart?.()
-
-    try {
-      // Simulate progressive analysis for demo
-      let progress = 0
-      const progressInterval = setInterval(() => {
-        progress += 0.1
-        onAnalysisProgress?.(progress)
-
-        if (progress >= 1) {
-          clearInterval(progressInterval)
-        }
-      }, 500)
-
-      // Simulate multiple analysis updates over time
-      const simulateAnalysis = async () => {
-        const totalUpdates = 5
-        for (let i = 0; i < totalUpdates; i++) {
-          await new Promise(resolve => setTimeout(resolve, 1000))
-
-          // Trigger demo video analysis that will broadcast via WebSocket
-          await fetch(`${API_BASE}/analyze/demo-video`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              meeting_id: meetingId,
-              video_source: selectedDemoVideo,
-              frame_progress: (i + 1) / totalUpdates
-            }),
-          })
-        }
-      }
-
-      await simulateAnalysis()
-
-    } catch (error) {
-      console.error('Error analyzing demo video:', error)
-      alert('Error analyzing demo video. Please try again.')
-    } finally {
-      setLoading((prev: Record<string, boolean>) => ({ ...prev, demoVideo: false }))
-    }
-  }
 
   const handleVideoUpload = async (file: File) => {
     setLoading((prev: Record<string, boolean>) => ({ ...prev, video: true }))

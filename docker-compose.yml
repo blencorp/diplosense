@@ -11,6 +11,7 @@ services:
       - SUPABASE_KEY=${SUPABASE_KEY}
     volumes:
       - ./api:/app
+      - ./demo-data:/demo-data:ro
     depends_on:
       - redis
     restart: unless-stopped
