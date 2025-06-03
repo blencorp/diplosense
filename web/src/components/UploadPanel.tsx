@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, ChangeEvent } from 'react'
 import { Upload, Video, FileText, Send } from 'lucide-react'
 
 interface AnalysisData {
@@ -15,17 +15,17 @@ interface UploadPanelProps {
   onAnalysisComplete: (analysis: AnalysisData) => void
 }
 
-const UploadPanel: React.FC<UploadPanelProps> = ({ meetingId, onAnalysisComplete }) => {
+const UploadPanel: React.FC<UploadPanelProps> = ({ meetingId, onAnalysisComplete }: UploadPanelProps) => {
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [textInput, setTextInput] = useState('')
   const [cultures, setCultures] = useState('')
-  const [loading, setLoading] = useState<{ [key: string]: boolean }>({})
+  const [loading, setLoading] = useState<Record<string, boolean>>({})
 
   const API_BASE = '/api/v1'
 
   const handleVideoUpload = async (file: File) => {
-    setLoading(prev => ({ ...prev, video: true }))
-    
+    setLoading((prev: Record<string, boolean>) => ({ ...prev, video: true }))
+
     try {
       const formData = new FormData()
       formData.append('video_file', file)
@@ -47,20 +47,20 @@ const UploadPanel: React.FC<UploadPanelProps> = ({ meetingId, onAnalysisComplete
         data: result.analysis,
         timestamp: new Date().toISOString()
       })
-      
+
       setVideoFile(null)
-      
+
     } catch (error) {
       console.error('Error uploading video:', error)
       alert('Error uploading video. Please try again.')
     } finally {
-      setLoading(prev => ({ ...prev, video: false }))
+      setLoading((prev: Record<string, boolean>) => ({ ...prev, video: false }))
     }
   }
 
   const handleDemoAnalysis = async () => {
-    setLoading(prev => ({ ...prev, demo: true }))
-    
+    setLoading((prev: Record<string, boolean>) => ({ ...prev, demo: true }))
+
     try {
       const response = await fetch(`${API_BASE}/demo/analyze`, {
         method: 'POST',
@@ -83,25 +83,25 @@ const UploadPanel: React.FC<UploadPanelProps> = ({ meetingId, onAnalysisComplete
         data: result.analysis,
         timestamp: new Date().toISOString()
       })
-      
+
     } catch (error) {
       console.error('Error running demo:', error)
       alert('Error running demo. Please try again.')
     } finally {
-      setLoading(prev => ({ ...prev, demo: false }))
+      setLoading((prev: Record<string, boolean>) => ({ ...prev, demo: false }))
     }
   }
 
   const handleTextAnalysis = async () => {
     if (!textInput.trim()) return
-    
-    setLoading(prev => ({ ...prev, text: true }))
-    
+
+    setLoading((prev: Record<string, boolean>) => ({ ...prev, text: true }))
+
     try {
       const formData = new FormData()
       formData.append('text', textInput)
       formData.append('meeting_id', meetingId)
-      formData.append('cultures', JSON.stringify(cultures.split(',').map(c => c.trim()).filter(c => c)))
+      formData.append('cultures', JSON.stringify(cultures.split(',').map((c: string) => c.trim()).filter((c: string) => c)))
 
       const response = await fetch(`${API_BASE}/analyze/text`, {
         method: 'POST',
@@ -119,20 +119,20 @@ const UploadPanel: React.FC<UploadPanelProps> = ({ meetingId, onAnalysisComplete
         data: result.analysis,
         timestamp: new Date().toISOString()
       })
-      
+
       setTextInput('')
-      
+
     } catch (error) {
       console.error('Error analyzing text:', error)
       alert('Error analyzing text. Please try again.')
     } finally {
-      setLoading(prev => ({ ...prev, text: false }))
+      setLoading((prev: Record<string, boolean>) => ({ ...prev, text: false }))
     }
   }
 
   const generateCable = async () => {
-    setLoading(prev => ({ ...prev, cable: true }))
-    
+    setLoading((prev: Record<string, boolean>) => ({ ...prev, cable: true }))
+
     try {
       // This would normally collect all the analysis data
       const analysisData = {
@@ -160,20 +160,29 @@ const UploadPanel: React.FC<UploadPanelProps> = ({ meetingId, onAnalysisComplete
         data: result.cable,
         timestamp: new Date().toISOString()
       })
-      
+
     } catch (error) {
       console.error('Error generating cable:', error)
       alert('Error generating diplomatic cable. Please try again.')
     } finally {
-      setLoading(prev => ({ ...prev, cable: false }))
+      setLoading((prev: Record<string, boolean>) => ({ ...prev, cable: false }))
     }
   }
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('video/')) {
+      setVideoFile(file);
+    } else if (file) {
+      alert('Please upload a video file');
+      e.target.value = '';
+    }
+  };
 
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload & Analysis</h2>
-        
 
         {/* Video Upload */}
         <div className="mb-6">
@@ -184,8 +193,8 @@ const UploadPanel: React.FC<UploadPanelProps> = ({ meetingId, onAnalysisComplete
           <div className="flex items-center space-x-2">
             <input
               type="file"
-              accept="video/*,image/*"
-              onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+              accept="video/*"
+              onChange={handleFileChange}
               className="flex-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
             />
             <button

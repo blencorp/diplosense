@@ -8,6 +8,8 @@ from datetime import datetime
 from typing import List, Optional
 import cv2
 import numpy as np
+import tempfile
+import os
 
 router = APIRouter()
 openai_service = OpenAIService()
@@ -41,24 +43,40 @@ async def analyze_video(
 ):
     """Analyze video for facial expressions and microexpressions"""
     try:
+        # Read video data
         video_data = await video_file.read()
-        
-        # Extract frames from video
-        nparr = np.frombuffer(video_data, np.uint8)
-        cap = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
-        if cap is None:
-            # If it's an image, analyze directly
-            analysis = await openai_service.analyze_facial_expressions(video_data)
-        else:
-            # For video, extract a frame
-            ret, frame = cap.read()
-            if ret:
-                _, buffer = cv2.imencode('.jpg', frame)
-                analysis = await openai_service.analyze_facial_expressions(buffer.tobytes())
+
+        # Create a temporary file to store the video
+        with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_video:
+            temp_video.write(video_data)
+            temp_video_path = temp_video.name
+
+        try:
+            # Open video file using OpenCV
+            cap = cv2.VideoCapture(temp_video_path)
+            if not cap.isOpened():
+                raise HTTPException(status_code=400, detail="Could not open video file")
+
+            # Extract a frame from the middle of the video
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            if total_frames > 0:
+                # Seek to middle frame
+                cap.set(cv2.CAP_PROP_POS_FRAMES, total_frames // 2)
+                ret, frame = cap.read()
+                if ret:
+                    # Convert frame to JPEG format
+                    _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 95])
+                    analysis = await openai_service.analyze_facial_expressions(buffer.tobytes())
+                else:
+                    raise HTTPException(status_code=400, detail="Could not extract frame from video")
             else:
-                raise HTTPException(status_code=400, detail="Could not process video file")
-        
+                raise HTTPException(status_code=400, detail="Video file appears to be empty")
+
+        finally:
+            # Clean up
+            cap.release()
+            os.unlink(temp_video_path)
+
         # Broadcast to WebSocket clients
         await manager.broadcast(json.dumps({
             "type": "facial_analysis",
@@ -66,13 +84,13 @@ async def analyze_video(
             "data": analysis,
             "timestamp": datetime.now().isoformat()
         }))
-        
+
         return JSONResponse(content={
             "meeting_id": meeting_id,
             "analysis": analysis,
             "timestamp": datetime.now().isoformat()
         })
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -86,7 +104,7 @@ async def analyze_text(
     try:
         culture_list = json.loads(cultures) if cultures else []
         analysis = await openai_service.analyze_text_sentiment(text, culture_list)
-        
+
         # Broadcast to WebSocket clients
         await manager.broadcast(json.dumps({
             "type": "text_analysis",
@@ -94,13 +112,13 @@ async def analyze_text(
             "data": analysis,
             "timestamp": datetime.now().isoformat()
         }))
-        
+
         return JSONResponse(content={
             "meeting_id": meeting_id,
             "analysis": analysis,
             "timestamp": datetime.now().isoformat()
         })
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -113,7 +131,7 @@ async def generate_cable(
     try:
         data = json.loads(analysis_data)
         cable = await openai_service.generate_diplomatic_cable(data)
-        
+
         # Broadcast to WebSocket clients
         await manager.broadcast(json.dumps({
             "type": "diplomatic_cable",
@@ -121,13 +139,13 @@ async def generate_cable(
             "data": cable,
             "timestamp": datetime.now().isoformat()
         }))
-        
+
         return JSONResponse(content={
             "meeting_id": meeting_id,
             "cable": cable,
             "timestamp": datetime.now().isoformat()
         })
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -136,7 +154,7 @@ async def demo_analyze(request: dict):
     """Demo analysis using sample diplomatic meeting video"""
     try:
         meeting_id = request.get("meeting_id", "demo")
-        
+
         # Simulate video analysis with sample diplomatic scenario
         demo_analysis = {
             "facial_expressions": {
@@ -149,7 +167,7 @@ async def demo_analyze(request: dict):
                     "stress_indicators": ["minimal_jaw_tension"]
                 },
                 "participant_2": {
-                    "nationality": "Chinese", 
+                    "nationality": "Chinese",
                     "primary_emotion": "composed",
                     "secondary_emotion": "cautious",
                     "micro_expressions": ["eye_narrowing", "controlled_breathing"],
@@ -161,7 +179,7 @@ async def demo_analyze(request: dict):
                 "participant_1": {
                     "posture": "leaning_forward",
                     "gesture_frequency": "high",
-                    "gesture_type": "pointing_emphatic", 
+                    "gesture_type": "pointing_emphatic",
                     "cultural_interpretation": "American direct communication style"
                 },
                 "participant_2": {
@@ -189,22 +207,22 @@ async def demo_analyze(request: dict):
                 ]
             }
         }
-        
+
         # Broadcast to WebSocket clients
         await manager.broadcast(json.dumps({
-            "type": "demo_analysis", 
+            "type": "demo_analysis",
             "meeting_id": meeting_id,
             "data": demo_analysis,
             "timestamp": datetime.now().isoformat()
         }))
-        
+
         return JSONResponse(content={
             "meeting_id": meeting_id,
             "analysis": demo_analysis,
             "timestamp": datetime.now().isoformat(),
             "demo": True
         })
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
