@@ -661,135 +661,6 @@ export default function LiveAnalysisPage() {
                     Stop Camera
                   </button>
                   
-                  {/* Audio Test Button */}
-                  <button
-                    onClick={async () => {
-                      console.log('Test button clicked. MediaRecorder:', mediaRecorder)
-                      console.log('MediaRecorder state:', mediaRecorder?.state)
-                      console.log('Has permission:', hasPermission)
-                      console.log('Stream:', stream)
-                      
-                      if (!mediaRecorder) {
-                        alert('MediaRecorder not initialized. Please start the camera first.')
-                        return
-                      }
-                      
-                      if (mediaRecorder.state !== 'inactive') {
-                        if (mediaRecorder.state === 'recording') {
-                          alert(`MediaRecorder is currently recording (live analysis is running). Please stop the live analysis first by clicking "Stop Analysis", then try the test again.`)
-                        } else {
-                          alert(`MediaRecorder is busy (state: ${mediaRecorder.state}). Please wait.`)
-                        }
-                        return
-                      }
-                      
-                      if (mediaRecorder && mediaRecorder.state === 'inactive') {
-                        console.log('Starting manual audio test...')
-                        const chunks: Blob[] = []
-                        
-                        mediaRecorder.ondataavailable = (event) => {
-                          if (event.data.size > 0) {
-                            chunks.push(event.data)
-                            console.log('Test audio chunk:', event.data.size, 'bytes')
-                          }
-                        }
-                        
-                        mediaRecorder.onstop = async () => {
-                          console.log('Test recording stopped, chunks:', chunks.length)
-                          if (chunks.length > 0) {
-                            const mimeType = mediaRecorder.mimeType || 'audio/webm'
-                            const audioBlob = new Blob(chunks, { type: mimeType })
-                            console.log('Test audio blob:', audioBlob.size, 'bytes', 'type:', mimeType)
-                            
-                            if (audioBlob.size < 1024) {
-                              alert('Audio blob too small. Check microphone permissions.')
-                              return
-                            }
-                            
-                            // Determine proper file extension
-                            let fileExtension = 'webm'
-                            if (mimeType.includes('mp4')) {
-                              fileExtension = 'mp4'
-                            } else if (mimeType.includes('ogg')) {
-                              fileExtension = 'ogg'
-                            } else if (mimeType.includes('wav')) {
-                              fileExtension = 'wav'
-                            }
-                            
-                            const fileName = `test.${fileExtension}`
-                            console.log('Using test filename:', fileName)
-                            
-                            // Test API call
-                            const formData = new FormData()
-                            formData.append('audio_file', audioBlob, fileName)
-                            formData.append('meeting_id', 'test-recording')
-                            
-                            try {
-                              const response = await fetch('/api/v1/analyze/audio', {
-                                method: 'POST',
-                                body: formData,
-                              })
-                              
-                              if (response.ok) {
-                                const result = await response.json()
-                                console.log('Test transcription result:', result)
-                                alert(`Test success! Transcript: ${result.transcript || 'No transcript'}`)
-                              } else {
-                                const errorText = await response.text()
-                                console.error('Test API error:', response.status, errorText)
-                                alert(`Test failed: ${response.status} - ${errorText}`)
-                              }
-                            } catch (error) {
-                              console.error('Test error:', error)
-                              alert(`Test error: ${error}`)
-                            }
-                          } else {
-                            alert('No audio chunks recorded. Check microphone.')
-                          }
-                        }
-                        
-                        mediaRecorder.start()
-                        setTimeout(() => mediaRecorder.stop(), 3000)
-                        alert('Recording 3 seconds of audio... speak into your microphone!')
-                      } else {
-                        alert('MediaRecorder not available or busy')
-                      }
-                    }}
-                    className="w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm"
-                    data-test-audio
-                  >
-                    Test Audio (3s)
-                  </button>
-                  
-                  {/* Debug Button */}
-                  <button
-                    onClick={() => {
-                      console.log('=== AUDIO DEBUG INFO ===')
-                      console.log('hasPermission:', hasPermission)
-                      console.log('stream:', stream)
-                      console.log('mediaRecorder:', mediaRecorder)
-                      console.log('mediaRecorder.state:', mediaRecorder?.state)
-                      console.log('isAnalyzing:', isAnalyzing)
-                      console.log('MediaRecorder supported:', typeof MediaRecorder !== 'undefined')
-                      
-                      if (stream) {
-                        const audioTracks = stream.getAudioTracks()
-                        console.log('Audio tracks:', audioTracks.length)
-                        audioTracks.forEach((track, i) => {
-                          console.log(`Track ${i}:`, {
-                            enabled: track.enabled,
-                            muted: track.muted,
-                            readyState: track.readyState
-                          })
-                        })
-                      }
-                      
-                      alert('Debug info logged to console')
-                    }}
-                    className="w-full px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm"
-                  >
-                    Debug Audio
-                  </button>
                 </div>
               )}
 
@@ -835,9 +706,8 @@ export default function LiveAnalysisPage() {
             </div>
           </div>
 
-          {/* Camera Feed and Dashboard */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Camera Feed */}
+          {/* Camera Feed */}
+          <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-lg overflow-hidden">
               <div className="relative">
                 {hasPermission ? (
@@ -873,14 +743,6 @@ export default function LiveAnalysisPage() {
                 )}
               </div>
             </div>
-
-            {/* Dashboard */}
-            <Dashboard
-              analysisData={analysisData}
-              meetingId={meetingId}
-              isAnalyzing={isAnalyzing}
-              analysisProgress={analysisProgress}
-            />
           </div>
         </div>
       </main>
