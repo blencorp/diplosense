@@ -31,6 +31,7 @@ export default function Home() {
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false)
   const [analysisProgress, setAnalysisProgress] = useState<number>(0)
   const [currentTranscript, setCurrentTranscript] = useState<string>('')
+  const [analysisInterval, setAnalysisInterval] = useState<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -105,6 +106,68 @@ export default function Home() {
     updateTranscript(progress)
   }
 
+  const handleVideoPlay = () => {
+    console.log('Video started playing')
+    // Start continuous analysis when video plays
+    if (currentVideo && !analysisInterval) {
+      startVideoAnalysis()
+    }
+  }
+
+  const handleVideoPause = () => {
+    console.log('Video paused')
+    // Stop analysis when video pauses
+    stopVideoAnalysis()
+  }
+
+  const startVideoAnalysis = () => {
+    if (analysisInterval) return // Already running
+    
+    setIsAnalyzing(true)
+    setAnalysisProgress(0)
+
+    let progress = 0
+    const interval = setInterval(async () => {
+      progress += 0.05 // Update every 500ms with 5% progress
+      setAnalysisProgress(progress)
+      
+      // Update transcript
+      updateTranscript(progress)
+
+      // Trigger analysis API call
+      try {
+        await fetch('/api/v1/analyze/demo-video', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            meeting_id: meetingId,
+            video_source: currentVideo,
+            frame_progress: progress
+          }),
+        })
+      } catch (error) {
+        console.error('Error in continuous analysis:', error)
+      }
+
+      // Stop when complete
+      if (progress >= 1) {
+        stopVideoAnalysis()
+      }
+    }, 500)
+    
+    setAnalysisInterval(interval)
+  }
+
+  const stopVideoAnalysis = () => {
+    if (analysisInterval) {
+      clearInterval(analysisInterval)
+      setAnalysisInterval(null)
+    }
+    setIsAnalyzing(false)
+  }
+
   const updateTranscript = (progress: number) => {
     const transcriptSegments = [
       "Ladies and gentlemen, distinguished delegates...",
@@ -163,6 +226,8 @@ export default function Home() {
               currentVideo={currentVideo}
               isAnalyzing={isAnalyzing}
               analysisProgress={analysisProgress}
+              onVideoPlay={handleVideoPlay}
+              onVideoPause={handleVideoPause}
             />
           </div>
         </div>

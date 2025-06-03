@@ -9,6 +9,8 @@ interface VideoPlayerProps {
   analysisProgress?: number
   onTimeUpdate?: (currentTime: number) => void
   onLoadedData?: (duration: number) => void
+  onPlay?: () => void
+  onPause?: () => void
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -16,7 +18,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   isAnalyzing = false,
   analysisProgress = 0,
   onTimeUpdate,
-  onLoadedData
+  onLoadedData,
+  onPlay,
+  onPause
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -40,8 +44,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       onLoadedData?.(video.duration)
     }
 
-    const handlePlay = () => setIsPlaying(true)
-    const handlePause = () => setIsPlaying(false)
+    const handlePlay = () => {
+      setIsPlaying(true)
+      onPlay?.()
+    }
+    const handlePause = () => {
+      setIsPlaying(false)
+      onPause?.()
+    }
     const handleEnded = () => setIsPlaying(false)
 
     video.addEventListener('timeupdate', handleTimeUpdate)

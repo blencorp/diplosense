@@ -19,6 +19,8 @@ interface DashboardProps {
   currentVideo?: string
   isAnalyzing?: boolean
   analysisProgress?: number
+  onVideoPlay?: () => void
+  onVideoPause?: () => void
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
@@ -26,7 +28,9 @@ const Dashboard: React.FC<DashboardProps> = ({
   meetingId, 
   currentVideo, 
   isAnalyzing = false, 
-  analysisProgress = 0 
+  analysisProgress = 0,
+  onVideoPlay,
+  onVideoPause
 }) => {
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisData | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -178,6 +182,8 @@ const Dashboard: React.FC<DashboardProps> = ({
           analysisProgress={analysisProgress}
           onTimeUpdate={handleVideoTimeUpdate}
           onLoadedData={handleVideoLoadedData}
+          onPlay={onVideoPlay}
+          onPause={onVideoPause}
         />
       )}
 

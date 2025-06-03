@@ -42,6 +42,8 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
   const handleDemoVideoSelect = (videoUrl: string) => {
     setSelectedDemoVideo(videoUrl)
     onVideoSelected?.(videoUrl)
+    // Reset any previous analysis state
+    setLoading((prev: Record<string, boolean>) => ({ ...prev, demoVideo: false }))
   }
 
   const handleDemoVideoAnalysis = async () => {
@@ -174,13 +176,9 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
               ))}
             </select>
             {selectedDemoVideo && (
-              <button
-                onClick={handleDemoVideoAnalysis}
-                disabled={loading.demoVideo}
-                className="mt-2 w-full px-4 py-2 bg-blue-600 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-700"
-              >
-                {loading.demoVideo ? 'Analyzing Video...' : 'Analyze Selected Video'}
-              </button>
+              <div className="mt-2 p-2 bg-blue-50 rounded-md text-sm text-blue-700">
+                <p>✓ Video selected. Play the video on the right to start real-time analysis.</p>
+              </div>
             )}
           </div>
 
