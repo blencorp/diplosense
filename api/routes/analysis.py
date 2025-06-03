@@ -187,8 +187,13 @@ async def extract_and_analyze_frame(video_source: str, frame_progress: float):
             # Encode frame as JPEG
             _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 95])
             
+            print(f"[VIDEO ANALYSIS] Extracted frame {target_frame}/{total_frames} from {video_path}")
+            print(f"[VIDEO ANALYSIS] Frame at {frame_progress*100:.1f}% progress, calling OpenAI...")
+            
             # Analyze with OpenAI
             analysis = await openai_service.analyze_facial_expressions(buffer.tobytes())
+            
+            print(f"[VIDEO ANALYSIS] OpenAI analysis completed for frame {target_frame}")
             
             # Add frame metadata
             analysis["frame_time"] = frame_progress * cap.get(cv2.CAP_PROP_FRAME_COUNT) / cap.get(cv2.CAP_PROP_FPS)

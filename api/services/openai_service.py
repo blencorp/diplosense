@@ -83,7 +83,12 @@ class OpenAIService:
                 response_format={"type": "json_object"}
             )
             
-            return json.loads(response.choices[0].message.content)
+            result = json.loads(response.choices[0].message.content)
+            print(f"[OpenAI] Response received from GPT-4o Vision:")
+            print(f"[OpenAI] Usage: {response.usage}")
+            print(f"[OpenAI] Analysis result: {result}")
+            
+            return result
             
         except Exception as e:
             print(f"Error in facial expression analysis: {e}")

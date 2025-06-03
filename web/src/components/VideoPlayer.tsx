@@ -128,7 +128,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   if (!videoUrl) {
     return (
-      <div className="bg-gray-100 rounded-lg flex items-center justify-center h-64">
+      <div className="bg-gray-100 rounded-lg flex items-center justify-center h-96">
         <p className="text-gray-500">No video selected</p>
       </div>
     )
@@ -140,7 +140,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         <video
           ref={videoRef}
           src={videoUrl}
-          className="w-full h-64 object-cover bg-black"
+          className="w-full h-96 object-contain bg-black"
           preload="metadata"
         />
         
