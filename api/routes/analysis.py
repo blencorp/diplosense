@@ -193,7 +193,7 @@ async def extract_and_analyze_frame(video_source: str, frame_progress: float):
             print(f"[VIDEO ANALYSIS] Frame at {frame_progress*100:.1f}% progress, calling OpenAI...")
             
             # Analyze visual content with OpenAI
-            analysis = await openai_service.analyze_facial_expressions(buffer.tobytes())
+            analysis = await openai_service.analyze_facial_expressions(buffer.tobytes(), "demo_video")
             
             # Extract and transcribe audio segment
             audio_transcript = await extract_and_transcribe_audio(video_path, current_time, fps)
@@ -267,7 +267,7 @@ async def extract_and_transcribe_audio(video_path: str, current_time: float, fps
         
         # Transcribe with OpenAI Whisper
         with open(temp_audio_path, 'rb') as audio_file:
-            transcript = await openai_service.transcribe_audio(audio_file.read())
+            transcript = await openai_service.transcribe_audio(audio_file.read(), "demo_video")
         
         # Clean up temp file
         os.unlink(temp_audio_path)
@@ -368,7 +368,7 @@ async def analyze_live_camera(request: dict):
         print(f"[LIVE CAMERA] Received frame for analysis, size: {len(image_bytes)} bytes")
         
         # Analyze with OpenAI
-        analysis = await openai_service.analyze_facial_expressions(image_bytes)
+        analysis = await openai_service.analyze_facial_expressions(image_bytes, meeting_id)
         
         # Add live metadata
         analysis["source"] = "live_camera"

@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 from routes.analysis import router as analysis_router
+from routes.simple_usage import router as usage_router
 from config import settings
 
 app = FastAPI(title="DiploSense API", description="Diplomatic Intelligence Fusion Platform")
@@ -17,6 +18,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(analysis_router, prefix="/api/v1", tags=["analysis"])
+app.include_router(usage_router, prefix="/api/v1", tags=["usage"])
 
 @app.get("/")
 async def root():
