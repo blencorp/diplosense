@@ -61,9 +61,19 @@ export default function Home() {
     socket.onmessage = (event: MessageEvent) => {
       try {
         const analysisUpdate: AnalysisData = JSON.parse(event.data)
+        console.log('WebSocket message received:', analysisUpdate.type, analysisUpdate)
+        
         let normalized = analysisUpdate
         if (analysisUpdate.type === "facial_analysis_update") {
           normalized = { ...analysisUpdate, type: "facial_analysis" }
+          
+          // Update transcript with real analysis data
+          if (normalized.data) {
+            console.log('Updating transcript with data:', normalized.data)
+            // frame_progress is at the top level, not in data
+            const frameProgress = (analysisUpdate as any).frame_progress || analysisProgress
+            updateTranscript(frameProgress, normalized.data)
+          }
         }
         setAnalysisData((prev: AnalysisData[]) => [...prev, normalized])
       } catch (error) {
@@ -89,6 +99,8 @@ export default function Home() {
 
   const handleVideoSelected = (videoUrl: string) => {
     setCurrentVideo(videoUrl)
+    // Clear previous transcript when new video is selected
+    setCurrentTranscript('')
   }
 
   const handleAnalysisStart = () => {
@@ -125,14 +137,15 @@ export default function Home() {
     
     setIsAnalyzing(true)
     setAnalysisProgress(0)
+    // Clear transcript when starting new analysis
+    setCurrentTranscript('')
 
     let progress = 0
     const interval = setInterval(async () => {
       progress += 0.05 // Update every 500ms with 5% progress
       setAnalysisProgress(progress)
       
-      // Update transcript
-      updateTranscript(progress)
+      // Transcript will be updated via WebSocket when real analysis data arrives
 
       // Trigger analysis API call
       try {
@@ -168,19 +181,35 @@ export default function Home() {
     setIsAnalyzing(false)
   }
 
-  const updateTranscript = (progress: number) => {
-    const transcriptSegments = [
-      "Ladies and gentlemen, distinguished delegates...",
-      "We gather here today to address matters of utmost importance to our nations...",
-      "The current geopolitical situation requires careful consideration and diplomatic dialogue...",
-      "I believe we can find common ground through respectful negotiation...",
-      "Our countries share many interests and values that can serve as a foundation...",
-      "Thank you for your attention and I look forward to productive discussions."
-    ]
+  const updateTranscript = (progress: number, analysisData?: any) => {
+    console.log('updateTranscript called with:', { progress, analysisData })
     
-    const segmentIndex = Math.floor(progress * transcriptSegments.length)
-    const transcript = transcriptSegments.slice(0, segmentIndex + 1).join(' ')
-    setCurrentTranscript(transcript)
+    // Generate transcript based on actual analysis data from OpenAI
+    if (analysisData && analysisData.emotions && Array.isArray(analysisData.emotions)) {
+      try {
+        const emotions = analysisData.emotions.map((e: any) => e.emotion).join(', ')
+        const behaviors = analysisData.observable_behaviors ? analysisData.observable_behaviors.join(', ') : 'speaking'
+        const timeString = new Date().toLocaleTimeString()
+        
+        const newSegment = `[${timeString}] Speaker displays: ${emotions} | Behaviors: ${behaviors}`
+        console.log('Generated transcript segment:', newSegment)
+        
+        // Append to existing transcript
+        setCurrentTranscript(prev => {
+          const newTranscript = prev + (prev ? '\n' : '') + newSegment
+          console.log('Updated transcript:', newTranscript)
+          return newTranscript
+        })
+      } catch (error) {
+        console.error('Error generating transcript segment:', error)
+      }
+    } else {
+      // Fallback for when no analysis data is available
+      const timeString = new Date().toLocaleTimeString()
+      const fallbackSegment = `[${timeString}] Analyzing video frame...`
+      console.log('Using fallback segment:', fallbackSegment)
+      setCurrentTranscript(prev => prev + (prev ? '\n' : '') + fallbackSegment)
+    }
   }
 
   if (!mounted) {
