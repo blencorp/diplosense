@@ -94,6 +94,31 @@ class OpenAIService:
             print(f"Error in facial expression analysis: {e}")
             return {"error": str(e)}
 
+    async def transcribe_audio(self, audio_data: bytes) -> str:
+        """Transcribe audio using OpenAI Whisper"""
+        try:
+            import io
+            
+            print(f"[OpenAI] Making audio transcription request to Whisper")
+            print(f"[OpenAI] Audio size: {len(audio_data)} bytes")
+            
+            # Create file-like object for Whisper API
+            audio_file = io.BytesIO(audio_data)
+            audio_file.name = "audio.wav"
+            
+            transcript = self.client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file,
+                response_format="text"
+            )
+            
+            print(f"[OpenAI] Whisper transcription result: {transcript}")
+            return transcript
+            
+        except Exception as e:
+            print(f"Error in audio transcription: {e}")
+            return ""
+
     async def analyze_text_sentiment(self, text: str, cultures: List[str] = []) -> Dict[str, Any]:
         """Analyze text sentiment and cultural context"""
         try:

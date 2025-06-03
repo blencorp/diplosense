@@ -184,18 +184,21 @@ export default function Home() {
   const updateTranscript = (progress: number, analysisData?: any) => {
     console.log('updateTranscript called with:', { progress, analysisData })
     
-    // Generate transcript based on actual analysis data from OpenAI
-    if (analysisData && analysisData.emotions && Array.isArray(analysisData.emotions)) {
+    // Use actual audio transcript from Whisper if available
+    if (analysisData && analysisData.transcript) {
       try {
-        const emotions = analysisData.emotions.map((e: any) => e.emotion).join(', ')
-        const behaviors = analysisData.observable_behaviors ? analysisData.observable_behaviors.join(', ') : 'speaking'
-        const timeString = new Date().toLocaleTimeString()
+        const frameTime = analysisData.frame_time || 0
+        const timeString = `${Math.floor(frameTime / 60)}:${Math.floor(frameTime % 60).toString().padStart(2, '0')}`
         
-        const newSegment = `[${timeString}] Speaker displays: ${emotions} | Behaviors: ${behaviors}`
+        const newSegment = `[${timeString}] ${analysisData.transcript}`
         console.log('Generated transcript segment:', newSegment)
         
         // Append to existing transcript
         setCurrentTranscript(prev => {
+          // Avoid duplicate entries
+          if (prev.includes(analysisData.transcript)) {
+            return prev
+          }
           const newTranscript = prev + (prev ? '\n' : '') + newSegment
           console.log('Updated transcript:', newTranscript)
           return newTranscript
@@ -204,11 +207,8 @@ export default function Home() {
         console.error('Error generating transcript segment:', error)
       }
     } else {
-      // Fallback for when no analysis data is available
-      const timeString = new Date().toLocaleTimeString()
-      const fallbackSegment = `[${timeString}] Analyzing video frame...`
-      console.log('Using fallback segment:', fallbackSegment)
-      setCurrentTranscript(prev => prev + (prev ? '\n' : '') + fallbackSegment)
+      // Only show progress if no actual transcript is available
+      console.log('No transcript data available in analysis')
     }
   }
 

@@ -175,7 +175,9 @@ async def extract_and_analyze_frame(video_source: str, frame_progress: float):
         try:
             # Calculate frame position based on progress
             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            fps = cap.get(cv2.CAP_PROP_FPS)
             target_frame = int(total_frames * frame_progress)
+            current_time = target_frame / fps
             
             # Set frame position
             cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
@@ -190,13 +192,18 @@ async def extract_and_analyze_frame(video_source: str, frame_progress: float):
             print(f"[VIDEO ANALYSIS] Extracted frame {target_frame}/{total_frames} from {video_path}")
             print(f"[VIDEO ANALYSIS] Frame at {frame_progress*100:.1f}% progress, calling OpenAI...")
             
-            # Analyze with OpenAI
+            # Analyze visual content with OpenAI
             analysis = await openai_service.analyze_facial_expressions(buffer.tobytes())
+            
+            # Extract and transcribe audio segment
+            audio_transcript = await extract_and_transcribe_audio(video_path, current_time, fps)
+            if audio_transcript:
+                analysis["transcript"] = audio_transcript
             
             print(f"[VIDEO ANALYSIS] OpenAI analysis completed for frame {target_frame}")
             
             # Add frame metadata
-            analysis["frame_time"] = frame_progress * cap.get(cv2.CAP_PROP_FRAME_COUNT) / cap.get(cv2.CAP_PROP_FPS)
+            analysis["frame_time"] = current_time
             analysis["frame_number"] = target_frame
             analysis["total_frames"] = total_frames
             
@@ -219,6 +226,61 @@ async def extract_and_analyze_frame(video_source: str, frame_progress: float):
             "overall_confidence_score": 0.7,
             "error": f"Frame extraction failed: {str(e)}"
         }
+
+async def extract_and_transcribe_audio(video_path: str, current_time: float, fps: float):
+    """Extract audio segment from video and transcribe with Whisper"""
+    try:
+        import tempfile
+        import subprocess
+        
+        # Create temporary audio file for this segment
+        # Extract 2-second audio clip around current time
+        start_time = max(0, current_time - 1)  # 1 second before
+        duration = 2  # 2 seconds total
+        
+        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_audio:
+            temp_audio_path = temp_audio.name
+        
+        # Use ffmpeg to extract audio segment
+        ffmpeg_cmd = [
+            'ffmpeg', '-i', video_path,
+            '-ss', str(start_time),
+            '-t', str(duration),
+            '-acodec', 'pcm_s16le',
+            '-ar', '16000',
+            '-ac', '1',
+            '-y',  # Overwrite output file
+            temp_audio_path
+        ]
+        
+        result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"[AUDIO] FFmpeg error: {result.stderr}")
+            return None
+        
+        # Check if audio file has content
+        if os.path.getsize(temp_audio_path) < 1000:  # Less than 1KB, probably silent
+            os.unlink(temp_audio_path)
+            return None
+        
+        print(f"[AUDIO] Extracted {duration}s audio segment at {current_time:.1f}s, transcribing...")
+        
+        # Transcribe with OpenAI Whisper
+        with open(temp_audio_path, 'rb') as audio_file:
+            transcript = await openai_service.transcribe_audio(audio_file.read())
+        
+        # Clean up temp file
+        os.unlink(temp_audio_path)
+        
+        if transcript and transcript.strip():
+            print(f"[AUDIO] Transcription: {transcript}")
+            return transcript.strip()
+        
+        return None
+        
+    except Exception as e:
+        print(f"Error in audio transcription: {e}")
+        return None
 
 @router.post("/analyze/demo-video")
 async def analyze_demo_video(request: dict):
