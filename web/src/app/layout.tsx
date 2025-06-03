@@ -5,8 +5,8 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'DiploSense - Diplomatic Intelligence Fusion',
-  description: 'Real-Time Diplomatic Intelligence Fusion Platform',
+  title: 'DiploSense - Diplomatic Intelligence Platform',
+  description: 'Real-Time Diplomatic Intelligence Platform',
 }
 
 export default function RootLayout({

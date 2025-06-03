@@ -6,7 +6,7 @@ from routes.analysis import router as analysis_router
 from routes.simple_usage import router as usage_router
 from config import settings
 
-app = FastAPI(title="DiploSense API", description="Diplomatic Intelligence Fusion Platform")
+app = FastAPI(title="DiploSense API", description="Diplomatic Intelligence Platform")
 
 app.add_middleware(
     CORSMiddleware,

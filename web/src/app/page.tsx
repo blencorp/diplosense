@@ -231,7 +231,7 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold">DiploSense</h1>
-              <p className="text-blue-200">Real-Time Diplomatic Intelligence Fusion Platform</p>
+              <p className="text-blue-200">Real-Time Diplomatic Intelligence Platform</p>
             </div>
             <nav className="flex gap-4">
               <a 

@@ -46,7 +46,7 @@ describe('Home Page', () => {
       
       await waitFor(() => {
         expect(screen.getByText('DiploSense')).toBeInTheDocument()
-        expect(screen.getByText('Real-Time Diplomatic Intelligence Fusion Platform')).toBeInTheDocument()
+        expect(screen.getByText('Real-Time Diplomatic Intelligence Platform')).toBeInTheDocument()
       })
     })
   })

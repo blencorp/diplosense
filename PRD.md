@@ -1,4 +1,4 @@
-**Product Requirements Document (PRD): DiploSense – Real-Time Diplomatic Intelligence Fusion Platform**
+**Product Requirements Document (PRD): DiploSense – Real-Time Diplomatic Intelligence Platform**
 
 ---
 

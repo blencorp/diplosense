@@ -1,4 +1,4 @@
-# DiploSense - Real-Time Diplomatic Intelligence Fusion Platform
+# DiploSense - Real-Time Diplomatic Intelligence Platform
 
 A video-focused AI platform designed to support diplomats and policymakers during high-stakes negotiations by analyzing visual, textual, and cultural data in real time.
 
