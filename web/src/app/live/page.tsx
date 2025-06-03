@@ -31,12 +31,17 @@ export default function LiveAnalysisPage() {
   const [analysisProgress, setAnalysisProgress] = useState<number>(0)
   const [currentTranscript, setCurrentTranscript] = useState<string>('')
   const [analysisInterval, setAnalysisInterval] = useState<NodeJS.Timeout | null>(null)
+  const [recordingInterval, setRecordingInterval] = useState<NodeJS.Timeout | null>(null)
   
   // Camera related state
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [isRecording, setIsRecording] = useState<boolean>(false)
   const [hasPermission, setHasPermission] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
+  
+  // Audio recording state
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([])
   
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -109,6 +114,22 @@ export default function LiveAnalysisPage() {
               return prev + (prev ? '\n' : '') + newSegment
             })
           }
+        } else if (analysisUpdate.type === "audio_analysis") {
+          // Handle audio transcription updates from WebSocket
+          console.log('Received audio analysis via WebSocket:', analysisUpdate.data)
+          
+          if (analysisUpdate.data && analysisUpdate.data.transcript) {
+            const timeString = new Date().toLocaleTimeString()
+            const newSegment = `[${timeString}] ${analysisUpdate.data.transcript}`
+            
+            setCurrentTranscript(prev => {
+              // Avoid duplicate entries
+              if (prev.includes(analysisUpdate.data.transcript)) {
+                return prev
+              }
+              return prev + (prev ? '\n' : '') + newSegment
+            })
+          }
         }
         setAnalysisData((prev: AnalysisData[]) => [...prev, normalized])
       } catch (error) {
@@ -142,7 +163,122 @@ export default function LiveAnalysisPage() {
       
       setStream(mediaStream)
       setHasPermission(true)
-      console.log('Camera stream initialized successfully')
+      
+      // Debug audio tracks
+      const audioTracks = mediaStream.getAudioTracks()
+      console.log('Audio tracks found:', audioTracks.length)
+      audioTracks.forEach((track, index) => {
+        console.log(`Audio track ${index}:`, {
+          enabled: track.enabled,
+          muted: track.muted,
+          readyState: track.readyState,
+          settings: track.getSettings()
+        })
+      })
+      
+      // Set up audio recording with fallback MIME types
+      if (typeof MediaRecorder !== 'undefined') {
+        try {
+          // Check if we have audio tracks
+          const audioTracks = mediaStream.getAudioTracks()
+          if (audioTracks.length === 0) {
+            console.error('No audio tracks available in the stream')
+            setMediaRecorder(null)
+            return
+          }
+          
+          // Create audio-only stream for MediaRecorder
+          const audioStream = new MediaStream(audioTracks)
+          console.log('Created audio-only stream with tracks:', audioTracks.length)
+          
+          let recorder: MediaRecorder
+          
+          // Try different MIME types in order of preference
+          const mimeTypes = [
+            'audio/webm;codecs=opus',
+            'audio/webm',
+            'audio/mp4',
+            'audio/ogg;codecs=opus', 
+            'audio/ogg',
+            'audio/wav'
+          ]
+          
+          console.log('Testing MIME type support:')
+          mimeTypes.forEach(type => {
+            console.log(`${type}: ${MediaRecorder.isTypeSupported(type)}`)
+          })
+          
+          let selectedMimeType = ''
+          for (const mimeType of mimeTypes) {
+            if (MediaRecorder.isTypeSupported(mimeType)) {
+              selectedMimeType = mimeType
+              break
+            }
+          }
+          
+          if (selectedMimeType) {
+            console.log('Trying to create MediaRecorder with MIME type:', selectedMimeType)
+            try {
+              recorder = new MediaRecorder(audioStream, {
+                mimeType: selectedMimeType
+              })
+              console.log('✓ MediaRecorder created successfully with MIME type:', selectedMimeType)
+            } catch (mimeError) {
+              console.warn('Failed with specific MIME type, trying default:', mimeError)
+              recorder = new MediaRecorder(audioStream)
+              console.log('✓ MediaRecorder created with default MIME type')
+            }
+          } else {
+            // Fallback to default (no mimeType specified)
+            console.log('No supported MIME types found, trying default')
+            recorder = new MediaRecorder(audioStream)
+            console.log('✓ MediaRecorder created with default configuration')
+          }
+          
+          // Test recording capability
+          console.log('Testing MediaRecorder start/stop...')
+          try {
+            recorder.start()
+            console.log('✓ MediaRecorder start test successful')
+            recorder.stop()
+            console.log('✓ MediaRecorder stop test successful')
+          } catch (testError) {
+            console.error('✗ MediaRecorder start/stop test failed with audio-only stream:', testError)
+            console.log('Trying fallback with full media stream...')
+            
+            // Fallback: try with the full stream instead of audio-only
+            try {
+              if (selectedMimeType) {
+                recorder = new MediaRecorder(mediaStream, {
+                  mimeType: selectedMimeType
+                })
+              } else {
+                recorder = new MediaRecorder(mediaStream)
+              }
+              
+              // Test the fallback
+              recorder.start()
+              console.log('✓ Fallback MediaRecorder start test successful')
+              recorder.stop()
+              console.log('✓ Fallback MediaRecorder stop test successful')
+            } catch (fallbackError) {
+              console.error('✗ Fallback MediaRecorder test also failed:', fallbackError)
+              throw fallbackError
+            }
+          }
+          
+          setMediaRecorder(recorder)
+          console.log('✓ MediaRecorder successfully set in state:', recorder.state)
+        } catch (error) {
+          console.error('Error initializing MediaRecorder:', error)
+          console.log('Audio recording disabled - continuing with video-only analysis')
+          setMediaRecorder(null)
+        }
+      } else {
+        console.log('MediaRecorder not supported - continuing with video-only analysis')
+      }
+      
+      console.log('Camera stream and audio recorder initialized successfully')
     } catch (err) {
       console.error('Error accessing camera:', err)
       setError('Failed to access camera. Please ensure you have granted camera permissions.')
@@ -169,6 +305,96 @@ export default function LiveAnalysisPage() {
     setIsAnalyzing(true)
     setAnalysisProgress(0)
     setCurrentTranscript('')
+    setAudioChunks([])
+
+    // Start audio recording if available
+    if (mediaRecorder) {
+      console.log('Setting up audio recording...')
+      const recordedMimeType = mediaRecorder.mimeType || 'audio/webm'
+      console.log('Using recorded MIME type:', recordedMimeType)
+      
+      // Clear any existing event listeners to avoid duplicates
+      mediaRecorder.removeEventListener('dataavailable', () => {})
+      mediaRecorder.removeEventListener('stop', () => {})
+      
+      // Use a ref to store chunks to avoid closure issues
+      let audioChunks: Blob[] = []
+      
+      const handleDataAvailable = (event: BlobEvent) => {
+        if (event.data.size > 0) {
+          console.log('Audio data received:', event.data.size, 'bytes')
+          audioChunks.push(event.data)
+        } else {
+          console.log('Received empty audio data chunk')
+        }
+      }
+
+      const handleStop = async () => {
+        console.log('Audio recording stopped, chunks:', audioChunks.length)
+        if (audioChunks.length > 0) {
+          const audioBlob = new Blob(audioChunks, { type: recordedMimeType })
+          console.log('Created audio blob:', audioBlob.size, 'bytes', 'type:', recordedMimeType)
+          
+          // Only transcribe if the blob has a reasonable size (minimum 512 bytes for 2-second chunks)
+          if (audioBlob.size > 512) {
+            await transcribeAudio(audioBlob)
+          } else {
+            console.log('Audio blob too small to transcribe:', audioBlob.size, 'bytes')
+          }
+          audioChunks = [] // Clear chunks
+        } else {
+          console.log('No audio chunks to process')
+        }
+      }
+
+      // Set up event handlers
+      mediaRecorder.addEventListener('dataavailable', handleDataAvailable)
+      mediaRecorder.addEventListener('stop', handleStop)
+
+      // Start recording
+      try {
+        if (mediaRecorder.state === 'inactive') {
+          mediaRecorder.start(1500) // Record in 1.5-second chunks for faster response
+          console.log('Audio recording started with 1.5-second chunks')
+          
+          // Set up interval to restart recording every 1.5 seconds
+          const recInterval = setInterval(() => {
+            if (!isAnalyzing) {
+              console.log('Analysis stopped, clearing recording interval')
+              clearInterval(recInterval)
+              return
+            }
+            
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+              console.log('Stopping current recording to process chunk...')
+              mediaRecorder.stop()
+              
+              // Start new recording immediately for minimal delay
+              setTimeout(() => {
+                if (isAnalyzing && mediaRecorder && mediaRecorder.state === 'inactive') {
+                  try {
+                    mediaRecorder.start(1500)
+                    console.log('Restarted audio recording')
+                  } catch (error) {
+                    console.error('Error restarting audio recording:', error)
+                  }
+                }
+              }, 50) // Reduced delay from 200ms to 50ms
+            } else {
+              console.log('MediaRecorder not in recording state:', mediaRecorder?.state)
+            }
+          }, 1600) // Slightly longer than recording duration
+          
+          setRecordingInterval(recInterval)
+        } else {
+          console.error('MediaRecorder not in inactive state:', mediaRecorder.state)
+        }
+      } catch (error) {
+        console.error('Error starting audio recording:', error)
+      }
+    } else {
+      console.log('Audio recording not available - proceeding with video-only analysis')
+    }
 
     let progress = 0
     const interval = setInterval(async () => {
@@ -191,8 +417,87 @@ export default function LiveAnalysisPage() {
       clearInterval(analysisInterval)
       setAnalysisInterval(null)
     }
+    
+    if (recordingInterval) {
+      clearInterval(recordingInterval)
+      setRecordingInterval(null)
+    }
+    
+    // Stop audio recording
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop()
+    }
+    
     setIsAnalyzing(false)
     setAnalysisProgress(0)
+  }
+
+  const transcribeAudio = async (audioBlob: Blob) => {
+    try {
+      console.log('Transcribing audio blob:', {
+        size: audioBlob.size,
+        type: audioBlob.type
+      })
+
+      // Skip if blob is too small (likely silence)
+      if (audioBlob.size < 512) {
+        console.log('Audio blob too small, skipping transcription:', audioBlob.size, 'bytes')
+        return
+      }
+
+      // Determine proper file extension based on MIME type
+      let fileExtension = 'webm'
+      if (audioBlob.type.includes('mp4')) {
+        fileExtension = 'mp4'
+      } else if (audioBlob.type.includes('ogg')) {
+        fileExtension = 'ogg'
+      } else if (audioBlob.type.includes('wav')) {
+        fileExtension = 'wav'
+      }
+
+      const fileName = `recording.${fileExtension}`
+      console.log('Using filename:', fileName, 'for MIME type:', audioBlob.type)
+
+      const formData = new FormData()
+      formData.append('audio_file', audioBlob, fileName)
+      formData.append('meeting_id', meetingId)
+
+      console.log('Sending audio to API for transcription...')
+      const response = await fetch('/api/v1/analyze/audio', {
+        method: 'POST',
+        body: formData,
+      })
+
+      console.log('Audio API response status:', response.status)
+
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Audio transcription result:', result)
+        
+        if (result.transcript) {
+          console.log('Adding transcript to UI:', result.transcript)
+          const timeString = new Date().toLocaleTimeString()
+          const newSegment = `[${timeString}] ${result.transcript}`
+          
+          setCurrentTranscript(prev => {
+            // Avoid duplicate entries
+            if (prev.includes(result.transcript)) {
+              return prev
+            }
+            const newTranscript = prev + (prev ? '\n' : '') + newSegment
+            console.log('Updated transcript:', newTranscript)
+            return newTranscript
+          })
+        } else {
+          console.log('No transcript in response:', result)
+        }
+      } else {
+        const errorText = await response.text()
+        console.error('Audio API error:', response.status, errorText)
+      }
+    } catch (error) {
+      console.error('Error transcribing audio:', error)
+    }
   }
 
   const captureAndAnalyzeFrame = async () => {
@@ -354,6 +659,136 @@ export default function LiveAnalysisPage() {
                     className="w-full px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
                   >
                     Stop Camera
+                  </button>
+                  
+                  {/* Audio Test Button */}
+                  <button
+                    onClick={async () => {
+                      console.log('Test button clicked. MediaRecorder:', mediaRecorder)
+                      console.log('MediaRecorder state:', mediaRecorder?.state)
+                      console.log('Has permission:', hasPermission)
+                      console.log('Stream:', stream)
+                      
+                      if (!mediaRecorder) {
+                        alert('MediaRecorder not initialized. Please start the camera first.')
+                        return
+                      }
+                      
+                      if (mediaRecorder.state !== 'inactive') {
+                        if (mediaRecorder.state === 'recording') {
+                          alert(`MediaRecorder is currently recording (live analysis is running). Please stop the live analysis first by clicking "Stop Analysis", then try the test again.`)
+                        } else {
+                          alert(`MediaRecorder is busy (state: ${mediaRecorder.state}). Please wait.`)
+                        }
+                        return
+                      }
+                      
+                      if (mediaRecorder && mediaRecorder.state === 'inactive') {
+                        console.log('Starting manual audio test...')
+                        const chunks: Blob[] = []
+                        
+                        mediaRecorder.ondataavailable = (event) => {
+                          if (event.data.size > 0) {
+                            chunks.push(event.data)
+                            console.log('Test audio chunk:', event.data.size, 'bytes')
+                          }
+                        }
+                        
+                        mediaRecorder.onstop = async () => {
+                          console.log('Test recording stopped, chunks:', chunks.length)
+                          if (chunks.length > 0) {
+                            const mimeType = mediaRecorder.mimeType || 'audio/webm'
+                            const audioBlob = new Blob(chunks, { type: mimeType })
+                            console.log('Test audio blob:', audioBlob.size, 'bytes', 'type:', mimeType)
+                            
+                            if (audioBlob.size < 1024) {
+                              alert('Audio blob too small. Check microphone permissions.')
+                              return
+                            }
+                            
+                            // Determine proper file extension
+                            let fileExtension = 'webm'
+                            if (mimeType.includes('mp4')) {
+                              fileExtension = 'mp4'
+                            } else if (mimeType.includes('ogg')) {
+                              fileExtension = 'ogg'
+                            } else if (mimeType.includes('wav')) {
+                              fileExtension = 'wav'
+                            }
+                            
+                            const fileName = `test.${fileExtension}`
+                            console.log('Using test filename:', fileName)
+                            
+                            // Test API call
+                            const formData = new FormData()
+                            formData.append('audio_file', audioBlob, fileName)
+                            formData.append('meeting_id', 'test-recording')
+                            
+                            try {
+                              const response = await fetch('/api/v1/analyze/audio', {
+                                method: 'POST',
+                                body: formData,
+                              })
+                              
+                              if (response.ok) {
+                                const result = await response.json()
+                                console.log('Test transcription result:', result)
+                                alert(`Test success! Transcript: ${result.transcript || 'No transcript'}`)
+                              } else {
+                                const errorText = await response.text()
+                                console.error('Test API error:', response.status, errorText)
+                                alert(`Test failed: ${response.status} - ${errorText}`)
+                              }
+                            } catch (error) {
+                              console.error('Test error:', error)
+                              alert(`Test error: ${error}`)
+                            }
+                          } else {
+                            alert('No audio chunks recorded. Check microphone.')
+                          }
+                        }
+                        
+                        mediaRecorder.start()
+                        setTimeout(() => mediaRecorder.stop(), 3000)
+                        alert('Recording 3 seconds of audio... speak into your microphone!')
+                      } else {
+                        alert('MediaRecorder not available or busy')
+                      }
+                    }}
+                    className="w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm"
+                    data-test-audio
+                  >
+                    Test Audio (3s)
+                  </button>
+                  
+                  {/* Debug Button */}
+                  <button
+                    onClick={() => {
+                      console.log('=== AUDIO DEBUG INFO ===')
+                      console.log('hasPermission:', hasPermission)
+                      console.log('stream:', stream)
+                      console.log('mediaRecorder:', mediaRecorder)
+                      console.log('mediaRecorder.state:', mediaRecorder?.state)
+                      console.log('isAnalyzing:', isAnalyzing)
+                      console.log('MediaRecorder supported:', typeof MediaRecorder !== 'undefined')
+                      
+                      if (stream) {
+                        const audioTracks = stream.getAudioTracks()
+                        console.log('Audio tracks:', audioTracks.length)
+                        audioTracks.forEach((track, i) => {
+                          console.log(`Track ${i}:`, {
+                            enabled: track.enabled,
+                            muted: track.muted,
+                            readyState: track.readyState
+                          })
+                        })
+                      }
+                      
+                      alert('Debug info logged to console')
+                    }}
+                    className="w-full px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm"
+                  >
+                    Debug Audio
                   </button>
                 </div>
               )}

@@ -157,6 +157,47 @@ async def generate_cable(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/analyze/audio")
+async def analyze_audio(
+    audio_file: UploadFile = File(...),
+    meeting_id: str = Form(...)
+):
+    """Analyze audio for transcription and emotion"""
+    try:
+        audio_data = await audio_file.read()
+        
+        # Transcribe audio using OpenAI Whisper
+        transcript = await openai_service.transcribe_audio(audio_data, meeting_id)
+        
+        # Analyze emotion from transcript if available
+        emotion_analysis = None
+        if transcript:
+            emotion_analysis = await openai_service.analyze_audio_emotion(audio_data)
+        
+        result = {
+            "transcript": transcript,
+            "emotion_analysis": emotion_analysis,
+            "timestamp": datetime.now().isoformat()
+        }
+
+        # Broadcast to WebSocket clients
+        await manager.broadcast(json.dumps({
+            "type": "audio_analysis",
+            "meeting_id": meeting_id,
+            "data": result,
+            "timestamp": datetime.now().isoformat()
+        }))
+
+        return JSONResponse(content={
+            "meeting_id": meeting_id,
+            "analysis": result,
+            "transcript": transcript,
+            "timestamp": datetime.now().isoformat()
+        })
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 async def extract_and_analyze_frame(video_source: str, frame_progress: float):
     """Extract frame from video at specific progress and analyze with OpenAI"""
     try:
