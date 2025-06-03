@@ -1,8 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
   images: {
     domains: ['localhost'],
   },
@@ -10,7 +7,7 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: process.env.NODE_ENV === 'production' 
+        destination: process.env.NODE_ENV === 'production'
           ? 'http://api:8000/api/:path*'
           : 'http://localhost:8000/api/:path*',
       },

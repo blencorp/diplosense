@@ -1,9 +1,11 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { io, Socket } from 'socket.io-client'
-import Dashboard from '@/components/Dashboard'
-import UploadPanel from '@/components/UploadPanel'
+import dynamic from 'next/dynamic'
+
+// Dynamically import components to avoid SSR hydration issues
+const Dashboard = dynamic(() => import('@/components/Dashboard'), { ssr: false })
+const UploadPanel = dynamic(() => import('@/components/UploadPanel'), { ssr: false })
 
 interface AnalysisData {
   type: string
@@ -12,49 +14,79 @@ interface AnalysisData {
   timestamp: string
 }
 
+interface SocketState {
+  socket: WebSocket | null
+  isConnected: boolean
+}
+
 export default function Home() {
-  const [socket, setSocket] = useState<Socket | null>(null)
+  const [mounted, setMounted] = useState(false)
+  const [socketState, setSocketState] = useState<SocketState>({
+    socket: null,
+    isConnected: false
+  })
   const [meetingId, setMeetingId] = useState<string>('demo-meeting-1')
   const [analysisData, setAnalysisData] = useState<AnalysisData[]>([])
-  const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    // Only run on client side after mounting
+    if (!mounted) return
+
     // Initialize WebSocket connection
-    const wsUrl = process.env.NODE_ENV === 'production' 
-      ? 'ws://api:8000' 
-      : 'ws://localhost:8000'
-    const newSocket = io(wsUrl, {
-      transports: ['websocket']
-    })
+    const wsUrl = window.location.hostname === 'localhost'
+      ? 'ws://localhost:8080/api/v1/ws'
+      : `ws://${window.location.host}/api/v1/ws`
 
-    newSocket.on('connect', () => {
-      setIsConnected(true)
+    const socket = new WebSocket(`${wsUrl}/${meetingId}`)
+
+    socket.onopen = () => {
+      setSocketState((prev: SocketState) => ({ ...prev, isConnected: true }))
       console.log('Connected to WebSocket')
-    })
+    }
 
-    newSocket.on('disconnect', () => {
-      setIsConnected(false)
+    socket.onclose = () => {
+      setSocketState((prev: SocketState) => ({ ...prev, isConnected: false }))
       console.log('Disconnected from WebSocket')
-    })
+    }
 
-    newSocket.on('message', (data: string) => {
+    socket.onmessage = (event: MessageEvent) => {
       try {
-        const analysisUpdate: AnalysisData = JSON.parse(data)
-        setAnalysisData(prev => [...prev, analysisUpdate])
+        const analysisUpdate: AnalysisData = JSON.parse(event.data)
+        setAnalysisData((prev: AnalysisData[]) => [...prev, analysisUpdate])
       } catch (error) {
         console.error('Error parsing WebSocket message:', error)
       }
-    })
+    }
 
-    setSocket(newSocket)
+    socket.onerror = (error: Event) => {
+      console.error('WebSocket error:', error)
+      setSocketState((prev: SocketState) => ({ ...prev, isConnected: false }))
+    }
+
+    setSocketState((prev: SocketState) => ({ ...prev, socket }))
 
     return () => {
-      newSocket.close()
+      socket.close()
     }
-  }, [])
+  }, [meetingId, mounted])
 
   const handleNewAnalysis = (analysis: AnalysisData) => {
-    setAnalysisData(prev => [...prev, analysis])
+    setAnalysisData((prev: AnalysisData[]) => [...prev, analysis])
+  }
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading DiploSense...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -64,8 +96,8 @@ export default function Home() {
           <h1 className="text-2xl font-bold">DiploSense</h1>
           <p className="text-blue-200">Real-Time Diplomatic Intelligence Fusion Platform</p>
           <div className="flex items-center gap-2 mt-2">
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
-            <span className="text-sm">{isConnected ? 'Connected' : 'Disconnected'}</span>
+            <div className={`w-2 h-2 rounded-full ${socketState.isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
+            <span className="text-sm">{socketState.isConnected ? 'Connected' : 'Disconnected'}</span>
           </div>
         </div>
       </header>
@@ -73,13 +105,13 @@ export default function Home() {
       <main className="container mx-auto p-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
-            <UploadPanel 
+            <UploadPanel
               meetingId={meetingId}
               onAnalysisComplete={handleNewAnalysis}
             />
           </div>
           <div className="lg:col-span-2">
-            <Dashboard 
+            <Dashboard
               analysisData={analysisData}
               meetingId={meetingId}
             />

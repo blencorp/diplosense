@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Upload, Mic, Video, FileText, Send } from 'lucide-react'
+import { Upload, Video, FileText, Send } from 'lucide-react'
 
 interface AnalysisData {
   type: string
@@ -16,7 +16,6 @@ interface UploadPanelProps {
 }
 
 const UploadPanel: React.FC<UploadPanelProps> = ({ meetingId, onAnalysisComplete }) => {
-  const [audioFile, setAudioFile] = useState<File | null>(null)
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [textInput, setTextInput] = useState('')
   const [cultures, setCultures] = useState('')
@@ -24,15 +23,15 @@ const UploadPanel: React.FC<UploadPanelProps> = ({ meetingId, onAnalysisComplete
 
   const API_BASE = '/api/v1'
 
-  const handleFileUpload = async (file: File, endpoint: string, type: string) => {
-    setLoading(prev => ({ ...prev, [type]: true }))
+  const handleVideoUpload = async (file: File) => {
+    setLoading(prev => ({ ...prev, video: true }))
     
     try {
       const formData = new FormData()
-      formData.append(type === 'audio' ? 'audio_file' : 'video_file', file)
+      formData.append('video_file', file)
       formData.append('meeting_id', meetingId)
 
-      const response = await fetch(`${API_BASE}/${endpoint}`, {
+      const response = await fetch(`${API_BASE}/analyze/video`, {
         method: 'POST',
         body: formData,
       })
@@ -43,21 +42,53 @@ const UploadPanel: React.FC<UploadPanelProps> = ({ meetingId, onAnalysisComplete
 
       const result = await response.json()
       onAnalysisComplete({
-        type: `${type}_analysis`,
+        type: 'video_analysis',
         meeting_id: meetingId,
         data: result.analysis,
         timestamp: new Date().toISOString()
       })
       
-      // Clear the file input
-      if (type === 'audio') setAudioFile(null)
-      if (type === 'video') setVideoFile(null)
+      setVideoFile(null)
       
     } catch (error) {
-      console.error(`Error uploading ${type}:`, error)
-      alert(`Error uploading ${type}. Please try again.`)
+      console.error('Error uploading video:', error)
+      alert('Error uploading video. Please try again.')
     } finally {
-      setLoading(prev => ({ ...prev, [type]: false }))
+      setLoading(prev => ({ ...prev, video: false }))
+    }
+  }
+
+  const handleDemoAnalysis = async () => {
+    setLoading(prev => ({ ...prev, demo: true }))
+    
+    try {
+      const response = await fetch(`${API_BASE}/demo/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          meeting_id: meetingId
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+      onAnalysisComplete({
+        type: 'demo_analysis',
+        meeting_id: meetingId,
+        data: result.analysis,
+        timestamp: new Date().toISOString()
+      })
+      
+    } catch (error) {
+      console.error('Error running demo:', error)
+      alert('Error running demo. Please try again.')
+    } finally {
+      setLoading(prev => ({ ...prev, demo: false }))
     }
   }
 
@@ -143,34 +174,12 @@ const UploadPanel: React.FC<UploadPanelProps> = ({ meetingId, onAnalysisComplete
       <div className="bg-white p-6 rounded-lg shadow">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload & Analysis</h2>
         
-        {/* Audio Upload */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <Mic className="inline w-4 h-4 mr-1" />
-            Audio Analysis
-          </label>
-          <div className="flex items-center space-x-2">
-            <input
-              type="file"
-              accept="audio/*"
-              onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
-              className="flex-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            />
-            <button
-              onClick={() => audioFile && handleFileUpload(audioFile, 'analyze/audio', 'audio')}
-              disabled={!audioFile || loading.audio}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-700"
-            >
-              {loading.audio ? 'Analyzing...' : 'Analyze'}
-            </button>
-          </div>
-        </div>
 
         {/* Video Upload */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             <Video className="inline w-4 h-4 mr-1" />
-            Video/Image Analysis
+            Video Analysis
           </label>
           <div className="flex items-center space-x-2">
             <input
@@ -180,12 +189,24 @@ const UploadPanel: React.FC<UploadPanelProps> = ({ meetingId, onAnalysisComplete
               className="flex-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
             />
             <button
-              onClick={() => videoFile && handleFileUpload(videoFile, 'analyze/video', 'video')}
+              onClick={() => videoFile && handleVideoUpload(videoFile)}
               disabled={!videoFile || loading.video}
               className="px-4 py-2 bg-green-600 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-green-700"
             >
               {loading.video ? 'Analyzing...' : 'Analyze'}
             </button>
+          </div>
+          <div className="mt-2">
+            <button
+              onClick={handleDemoAnalysis}
+              disabled={loading.demo}
+              className="px-3 py-1 bg-blue-500 text-white text-sm rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-600"
+            >
+              {loading.demo ? 'Running Demo...' : 'Quick Demo'}
+            </button>
+            <span className="ml-2 text-xs text-gray-500">
+              Analyze sample diplomatic meeting video
+            </span>
           </div>
         </div>
 

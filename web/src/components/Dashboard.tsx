@@ -3,6 +3,7 @@
 import React, { useMemo } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts'
 import { AlertTriangle, Users, Brain, FileText } from 'lucide-react'
+import NoSSR from './NoSSR'
 
 interface AnalysisData {
   type: string
@@ -97,32 +98,36 @@ const Dashboard: React.FC<DashboardProps> = ({ analysisData, meetingId }) => {
       {/* Emotion Timeline */}
       <div className="bg-white p-6 rounded-lg shadow">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Negotiation Temperature</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={emotionData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="time" />
-            <YAxis domain={[-1, 1]} />
-            <Tooltip />
-            <Legend />
-            <Line type="monotone" dataKey="emotion" stroke="#2563eb" strokeWidth={2} name="Emotion Score" />
-            <Line type="monotone" dataKey="stress" stroke="#dc2626" strokeWidth={2} name="Stress Level" />
-          </LineChart>
-        </ResponsiveContainer>
+        <NoSSR fallback={<div className="h-[300px] flex items-center justify-center text-gray-500">Loading chart...</div>}>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={emotionData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="time" />
+              <YAxis domain={[-1, 1]} />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="emotion" stroke="#2563eb" strokeWidth={2} name="Emotion Score" />
+              <Line type="monotone" dataKey="stress" stroke="#dc2626" strokeWidth={2} name="Stress Level" />
+            </LineChart>
+          </ResponsiveContainer>
+        </NoSSR>
       </div>
 
       {/* Facial Expressions */}
       {facialData.length > 0 && (
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Facial Expressions</h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={facialData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="emotion" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="confidence" fill="#8884d8" />
-            </BarChart>
-          </ResponsiveContainer>
+          <NoSSR fallback={<div className="h-[200px] flex items-center justify-center text-gray-500">Loading chart...</div>}>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={facialData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="emotion" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="confidence" fill="#8884d8" />
+              </BarChart>
+            </ResponsiveContainer>
+          </NoSSR>
         </div>
       )}
 

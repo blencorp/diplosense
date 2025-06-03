@@ -3,6 +3,10 @@
 .env.local
 .env.production
 
+# Demo data
+demo-data/
+demo-data/**/*
+
 # Python
 __pycache__/
 *.py[cod]

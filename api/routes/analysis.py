@@ -33,32 +33,6 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-@router.post("/analyze/audio")
-async def analyze_audio(
-    audio_file: UploadFile = File(...),
-    meeting_id: str = Form(...)
-):
-    """Analyze audio for emotional tone and stress"""
-    try:
-        audio_data = await audio_file.read()
-        analysis = await openai_service.analyze_audio_emotion(audio_data)
-        
-        # Broadcast to WebSocket clients
-        await manager.broadcast(json.dumps({
-            "type": "audio_analysis",
-            "meeting_id": meeting_id,
-            "data": analysis,
-            "timestamp": datetime.now().isoformat()
-        }))
-        
-        return JSONResponse(content={
-            "meeting_id": meeting_id,
-            "analysis": analysis,
-            "timestamp": datetime.now().isoformat()
-        })
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/analyze/video")
 async def analyze_video(
@@ -152,6 +126,83 @@ async def generate_cable(
             "meeting_id": meeting_id,
             "cable": cable,
             "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/demo/analyze")
+async def demo_analyze(request: dict):
+    """Demo analysis using sample diplomatic meeting video"""
+    try:
+        meeting_id = request.get("meeting_id", "demo")
+        
+        # Simulate video analysis with sample diplomatic scenario
+        demo_analysis = {
+            "facial_expressions": {
+                "participant_1": {
+                    "nationality": "American",
+                    "primary_emotion": "confident",
+                    "secondary_emotion": "slightly_tense",
+                    "micro_expressions": ["brief_eyebrow_flash", "lip_compression"],
+                    "confidence_level": 0.8,
+                    "stress_indicators": ["minimal_jaw_tension"]
+                },
+                "participant_2": {
+                    "nationality": "Chinese", 
+                    "primary_emotion": "composed",
+                    "secondary_emotion": "cautious",
+                    "micro_expressions": ["eye_narrowing", "controlled_breathing"],
+                    "confidence_level": 0.9,
+                    "stress_indicators": ["none_detected"]
+                }
+            },
+            "body_language": {
+                "participant_1": {
+                    "posture": "leaning_forward",
+                    "gesture_frequency": "high",
+                    "gesture_type": "pointing_emphatic", 
+                    "cultural_interpretation": "American direct communication style"
+                },
+                "participant_2": {
+                    "posture": "upright_formal",
+                    "gesture_frequency": "low",
+                    "gesture_type": "minimal_controlled",
+                    "cultural_interpretation": "Chinese formal diplomatic approach"
+                }
+            },
+            "cultural_dynamics": {
+                "communication_mismatch": "high_directness_vs_indirect",
+                "potential_tension_points": ["time_pressure", "decision_making_pace"],
+                "recommended_adjustments": [
+                    "American delegate: Slow down delivery, allow processing time",
+                    "Chinese delegate: Consider more explicit verbal confirmations"
+                ]
+            },
+            "overall_assessment": {
+                "tension_level": "moderate",
+                "cooperation_probability": 0.7,
+                "key_insights": [
+                    "Cultural communication styles creating minor friction",
+                    "Both parties showing professional restraint",
+                    "Opportunity for cultural bridge-building"
+                ]
+            }
+        }
+        
+        # Broadcast to WebSocket clients
+        await manager.broadcast(json.dumps({
+            "type": "demo_analysis", 
+            "meeting_id": meeting_id,
+            "data": demo_analysis,
+            "timestamp": datetime.now().isoformat()
+        }))
+        
+        return JSONResponse(content={
+            "meeting_id": meeting_id,
+            "analysis": demo_analysis,
+            "timestamp": datetime.now().isoformat(),
+            "demo": True
         })
         
     except Exception as e:

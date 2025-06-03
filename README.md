@@ -1,15 +1,16 @@
 # DiploSense - Real-Time Diplomatic Intelligence Fusion Platform
 
-A multimodal AI platform designed to support diplomats and policymakers during high-stakes negotiations by fusing audio, visual, textual, and cultural data in real time.
+A video-focused AI platform designed to support diplomats and policymakers during high-stakes negotiations by analyzing visual, textual, and cultural data in real time.
 
 ## Features
 
-- **Voice & Emotion Analysis**: Real-time emotional tone detection using OpenAI's audio processing
-- **Facial Microexpression Detection**: Computer vision analysis of facial expressions and microexpressions
-- **Text Sentiment & Cultural Framing**: Advanced text analysis with cultural context awareness
+- **Video Analysis**: Advanced facial expression and microexpression detection using computer vision
+- **Body Language Analysis**: Posture, gesture, and non-verbal communication interpretation
+- **Text Sentiment & Cultural Framing**: Advanced text analysis with cultural context awareness  
 - **Cultural Context Engine**: Built-in rulebase for understanding cultural communication patterns
 - **Auto Diplomatic Cable Generator**: Multi-agent AI pipeline for generating structured diplomatic reports
 - **Real-time Dashboard**: Live visualization of negotiation dynamics and insights
+- **Quick Demo**: Instant analysis using sample diplomatic meeting scenarios
 
 ## Architecture
 
@@ -91,16 +92,18 @@ If you prefer to run services locally:
 
 ## Usage
 
-1. **Upload Media**: Use the upload panel to analyze audio files, video/images, or text
-2. **Real-time Analysis**: Watch as the system processes multimodal data in real-time
-3. **Dashboard Monitoring**: Monitor emotion scores, stress levels, and cultural indicators
-4. **Generate Reports**: Create diplomatic cables with AI-generated insights and recommendations
+1. **Upload Video**: Use the upload panel to analyze video files or images
+2. **Quick Demo**: Click "Quick Demo" to instantly analyze a sample diplomatic meeting scenario
+3. **Text Analysis**: Analyze meeting transcripts with cultural context
+4. **Real-time Analysis**: Watch as the system processes video and text data in real-time
+5. **Dashboard Monitoring**: Monitor emotion scores, stress levels, and cultural indicators
+6. **Generate Reports**: Create diplomatic cables with AI-generated insights and recommendations
 
 ## API Endpoints
 
-- `POST /api/v1/analyze/audio` - Analyze audio for emotional tone
-- `POST /api/v1/analyze/video` - Analyze video/images for facial expressions
+- `POST /api/v1/analyze/video` - Analyze video/images for facial expressions and body language
 - `POST /api/v1/analyze/text` - Analyze text sentiment and cultural context
+- `POST /api/v1/demo/analyze` - Run quick demo analysis with sample data
 - `POST /api/v1/generate/cable` - Generate diplomatic cable
 - `WS /api/v1/ws/{meeting_id}` - WebSocket for real-time updates
 
@@ -124,6 +127,29 @@ For demonstration purposes, the platform can analyze:
 - Sample diplomatic transcripts
 - Mock negotiation scenarios
 - Cross-cultural communication examples
+
+### Test Data Files
+
+The `test_data` directory contains sample files for testing the platform's capabilities:
+
+#### Video Files
+- `summit_meeting_2024.mp4` - International summit meeting excerpt
+- `press_briefing_2024.mp4` - Diplomatic press briefing  
+- `cross_cultural_negotiation.mp4` - Cross-cultural negotiation simulation
+
+The platform also includes a built-in **Quick Demo** feature that simulates analysis of a diplomatic meeting between American and Chinese delegates, demonstrating:
+- Facial expression analysis
+- Body language interpretation
+- Cultural communication pattern detection
+- Tension assessment and recommendations
+
+To download these files, run:
+
+```bash
+make download-test-data
+```
+
+Note: These are sample files for testing purposes only. They are either in the public domain or used under fair use for educational purposes.
 
 ## Development
 
