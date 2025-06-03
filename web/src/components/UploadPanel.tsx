@@ -101,9 +101,9 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload & Analysis</h2>
+    <div className="space-y-4 md:space-y-6">
+      <div className="bg-white p-4 md:p-6 rounded-lg shadow">
+        <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Upload & Analysis</h2>
 
         {/* Video Analysis */}
         <div className="mb-6">
@@ -118,7 +118,7 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
             <select
               value={selectedDemoVideo}
               onChange={(e) => handleDemoVideoSelect(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm md:text-base transition-all duration-200 bg-white hover:border-gray-400"
             >
               <option value="">Choose a demo video...</option>
               {demoVideos.map((video) => (
@@ -128,8 +128,11 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
               ))}
             </select>
             {selectedDemoVideo && (
-              <div className="mt-2 p-2 bg-blue-50 rounded-md text-sm text-blue-700">
-                <p>✓ Video selected. Play the video on the right to start real-time analysis.</p>
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-700">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <p className="font-medium">Video selected. Play the video on the right to start real-time analysis.</p>
+                </div>
               </div>
             )}
           </div>
@@ -137,19 +140,26 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
           {/* File Upload Option */}
           <div className="border-t pt-4">
             <label className="block text-xs text-gray-600 mb-2">Or Upload Your Own Video</label>
-            <div className="flex items-center space-x-2">
+            <div className="space-y-3">
               <input
                 type="file"
                 accept="video/*"
                 onChange={handleFileChange}
-                className="flex-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-3 md:file:px-4 file:rounded-full file:border-0 file:text-xs md:file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 file:transition-colors file:cursor-pointer cursor-pointer"
               />
               <button
                 onClick={() => videoFile && handleVideoUpload(videoFile)}
                 disabled={!videoFile || loading.video}
-                className="px-4 py-2 bg-green-600 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-green-700"
+                className="w-full px-4 py-3 bg-green-600 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 font-medium text-sm md:text-base"
               >
-                {loading.video ? 'Analyzing...' : 'Analyze'}
+                {loading.video ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Analyzing...</span>
+                  </div>
+                ) : (
+                  'Analyze Video'
+                )}
               </button>
             </div>
           </div>
