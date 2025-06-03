@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 // Dynamically import components to avoid SSR hydration issues
 const Dashboard = dynamic(() => import('@/components/Dashboard'), { ssr: false })
 const UploadPanel = dynamic(() => import('@/components/UploadPanel'), { ssr: false })
+const RecentActivity = dynamic(() => import('@/components/RecentActivity'), { ssr: false })
 
 interface AnalysisData {
   type: string
@@ -261,7 +262,7 @@ export default function Home() {
       </header>
 
       <main className="container mx-auto p-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-1">
             <UploadPanel
               meetingId={meetingId}
@@ -281,6 +282,11 @@ export default function Home() {
               analysisProgress={analysisProgress}
               onVideoPlay={handleVideoPlay}
               onVideoPause={handleVideoPause}
+            />
+          </div>
+          <div className="lg:col-span-1">
+            <RecentActivity
+              analysisData={analysisData}
             />
           </div>
         </div>

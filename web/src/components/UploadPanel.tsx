@@ -177,14 +177,6 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
         </div>
       </div>
 
-      {/* Meeting Info */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <h3 className="text-sm font-medium text-gray-700 mb-2">Meeting Information</h3>
-        <p className="text-sm text-gray-600">Meeting ID: {meetingId}</p>
-        <p className="text-xs text-gray-500 mt-1">
-          Started: {new Date().toLocaleString()}
-        </p>
-      </div>
     </div>
   )
 }
