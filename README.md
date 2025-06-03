@@ -35,8 +35,11 @@ A video-focused AI platform designed to support diplomats and policymakers durin
 2. Set up environment variables:
 
    ```bash
-   cp .env.example .env
-   # Edit .env with your OpenAI API key and Supabase credentials
+   cp api/.env.example api/.env
+   # Edit api/.env with your configuration:
+   # - OpenAI API key
+   # - Supabase credentials  
+   # - Admin password for usage analytics
    ```
 
 3. Build and start all services:
@@ -48,9 +51,10 @@ A video-focused AI platform designed to support diplomats and policymakers durin
    ```
 
 4. Access the application:
-   - Frontend: http://localhost:3000
+   - Frontend: http://localhost:8080
    - API: http://localhost:8000
    - API Documentation: http://localhost:8000/docs
+   - Admin Panel: http://localhost:8080/admin/usage (password protected)
 
 5. View logs:
 
@@ -98,6 +102,17 @@ If you prefer to run services locally:
 4. **Real-time Analysis**: Watch as the system processes video and text data in real-time
 5. **Dashboard Monitoring**: Monitor emotion scores, stress levels, and cultural indicators
 6. **Generate Reports**: Create diplomatic cables with AI-generated insights and recommendations
+
+## Admin Access
+
+The usage analytics are protected by an admin interface:
+
+- **URL**: http://localhost:8080/admin/usage
+- **Authentication**: Password-protected login
+- **Configuration**: Set admin password via `ADMIN_PASSWORD` environment variable
+- **Features**: API usage tracking, cost analysis, request monitoring
+
+Default admin password is `diplosense-admin-2024` but should be changed in production.
 
 ## API Endpoints
 

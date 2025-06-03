@@ -8,6 +8,9 @@ class Settings:
     SUPABASE_URL: str = os.getenv("SUPABASE_URL")
     SUPABASE_KEY: str = os.getenv("SUPABASE_KEY")
     
+    # Admin configuration
+    ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "diplosense-admin-2024")
+    
     API_HOST: str = os.getenv("API_HOST", "0.0.0.0")
     API_PORT: int = int(os.getenv("API_PORT", "8000"))
     

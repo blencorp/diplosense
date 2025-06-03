@@ -287,10 +287,10 @@ export default function LiveAnalysisPage() {
                 Live Camera
               </a>
               <a 
-                href="/usage" 
-                className="px-4 py-2 bg-blue-700 rounded-md hover:bg-blue-600 transition-colors"
+                href="/admin/usage" 
+                className="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500 transition-colors text-sm"
               >
-                Usage Analytics
+                Admin
               </a>
             </nav>
           </div>
