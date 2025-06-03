@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, ChangeEvent } from 'react'
-import { Upload, Video, FileText, Send } from 'lucide-react'
+import { Upload, Video, FileText } from 'lucide-react'
 
 interface AnalysisData {
   type: string
@@ -16,6 +16,7 @@ interface UploadPanelProps {
   onVideoSelected?: (videoUrl: string) => void
   onAnalysisStart?: () => void
   onAnalysisProgress?: (progress: number) => void
+  currentTranscript?: string
 }
 
 const UploadPanel: React.FC<UploadPanelProps> = ({
@@ -23,7 +24,8 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
   onAnalysisComplete,
   onVideoSelected,
   onAnalysisStart,
-  onAnalysisProgress
+  onAnalysisProgress,
+  currentTranscript = ''
 }) => {
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [selectedDemoVideo, setSelectedDemoVideo] = useState<string>('')
@@ -133,39 +135,6 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
     }
   }
 
-  const handleDemoAnalysis = async () => {
-    setLoading((prev: Record<string, boolean>) => ({ ...prev, demo: true }))
-
-    try {
-      const response = await fetch(`${API_BASE}/demo/analyze`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          meeting_id: meetingId
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const result = await response.json()
-      onAnalysisComplete({
-        type: 'demo_analysis',
-        meeting_id: meetingId,
-        data: result.analysis,
-        timestamp: new Date().toISOString()
-      })
-
-    } catch (error) {
-      console.error('Error running demo:', error)
-      alert('Error running demo. Please try again.')
-    } finally {
-      setLoading((prev: Record<string, boolean>) => ({ ...prev, demo: false }))
-    }
-  }
 
   const handleTextAnalysis = async () => {
     if (!textInput.trim()) return
@@ -205,44 +174,6 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
     }
   }
 
-  const generateCable = async () => {
-    setLoading((prev: Record<string, boolean>) => ({ ...prev, cable: true }))
-
-    try {
-      // This would normally collect all the analysis data
-      const analysisData = {
-        meeting_id: meetingId,
-        timestamp: new Date().toISOString()
-      }
-
-      const formData = new FormData()
-      formData.append('meeting_id', meetingId)
-      formData.append('analysis_data', JSON.stringify(analysisData))
-
-      const response = await fetch(`${API_BASE}/generate/cable`, {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const result = await response.json()
-      onAnalysisComplete({
-        type: 'diplomatic_cable',
-        meeting_id: meetingId,
-        data: result.cable,
-        timestamp: new Date().toISOString()
-      })
-
-    } catch (error) {
-      console.error('Error generating cable:', error)
-      alert('Error generating diplomatic cable. Please try again.')
-    } finally {
-      setLoading((prev: Record<string, boolean>) => ({ ...prev, cable: false }))
-    }
-  }
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -312,19 +243,6 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
             </div>
           </div>
 
-          {/* Quick Demo Button */}
-          <div className="mt-4 pt-4 border-t">
-            <button
-              onClick={handleDemoAnalysis}
-              disabled={loading.demo}
-              className="px-3 py-1 bg-gray-500 text-white text-sm rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-gray-600"
-            >
-              {loading.demo ? 'Running Demo...' : 'Quick Demo Analysis'}
-            </button>
-            <span className="ml-2 text-xs text-gray-500">
-              Run analysis without video
-            </span>
-          </div>
         </div>
 
         {/* Text Analysis */}
@@ -356,16 +274,23 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
           </button>
         </div>
 
-        {/* Generate Cable */}
+        {/* Live Transcript */}
         <div className="border-t pt-4">
-          <button
-            onClick={generateCable}
-            disabled={loading.cable}
-            className="w-full px-4 py-3 bg-red-600 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-red-700 flex items-center justify-center"
-          >
-            <Send className="w-4 h-4 mr-2" />
-            {loading.cable ? 'Generating...' : 'Generate Diplomatic Cable'}
-          </button>
+          <h3 className="text-sm font-medium text-gray-700 mb-2">
+            <FileText className="inline w-4 h-4 mr-1" />
+            Live Transcript
+          </h3>
+          <div className="bg-gray-50 p-3 rounded-md min-h-[120px] max-h-[300px] overflow-y-auto">
+            {currentTranscript ? (
+              <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                {currentTranscript}
+              </p>
+            ) : (
+              <p className="text-sm text-gray-500 italic">
+                Transcript will appear here when video analysis begins...
+              </p>
+            )}
+          </div>
         </div>
       </div>
 

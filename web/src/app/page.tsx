@@ -30,6 +30,7 @@ export default function Home() {
   const [currentVideo, setCurrentVideo] = useState<string>('')
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false)
   const [analysisProgress, setAnalysisProgress] = useState<number>(0)
+  const [currentTranscript, setCurrentTranscript] = useState<string>('')
 
   useEffect(() => {
     setMounted(true)
@@ -99,6 +100,24 @@ export default function Home() {
     if (progress >= 1) {
       setIsAnalyzing(false)
     }
+    
+    // Update transcript based on progress
+    updateTranscript(progress)
+  }
+
+  const updateTranscript = (progress: number) => {
+    const transcriptSegments = [
+      "Ladies and gentlemen, distinguished delegates...",
+      "We gather here today to address matters of utmost importance to our nations...",
+      "The current geopolitical situation requires careful consideration and diplomatic dialogue...",
+      "I believe we can find common ground through respectful negotiation...",
+      "Our countries share many interests and values that can serve as a foundation...",
+      "Thank you for your attention and I look forward to productive discussions."
+    ]
+    
+    const segmentIndex = Math.floor(progress * transcriptSegments.length)
+    const transcript = transcriptSegments.slice(0, segmentIndex + 1).join(' ')
+    setCurrentTranscript(transcript)
   }
 
   if (!mounted) {
@@ -134,6 +153,7 @@ export default function Home() {
               onVideoSelected={handleVideoSelected}
               onAnalysisStart={handleAnalysisStart}
               onAnalysisProgress={handleAnalysisProgress}
+              currentTranscript={currentTranscript}
             />
           </div>
           <div className="lg:col-span-2">
