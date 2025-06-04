@@ -241,12 +241,6 @@ export default function Home() {
                 Video Analysis
               </a>
               <a 
-                href="/live" 
-                className="px-4 py-2 bg-blue-700 rounded-md hover:bg-blue-600 transition-colors"
-              >
-                Live Camera
-              </a>
-              <a 
                 href="/news" 
                 className="px-4 py-2 bg-blue-700 rounded-md hover:bg-blue-600 transition-colors"
               >
