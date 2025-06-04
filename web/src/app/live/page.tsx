@@ -592,6 +592,12 @@ export default function LiveAnalysisPage() {
                 Live Camera
               </a>
               <a 
+                href="/news" 
+                className="px-4 py-2 bg-blue-700 rounded-md hover:bg-blue-600 transition-colors"
+              >
+                News Analysis
+              </a>
+              <a 
                 href="/admin/usage" 
                 className="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500 transition-colors text-sm"
               >

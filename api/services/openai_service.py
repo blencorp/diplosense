@@ -288,3 +288,84 @@ class OpenAIService:
         except Exception as e:
             print(f"Error in diplomatic cable generation: {e}")
             return {"error": str(e)}
+
+    async def analyze_news_text(self, text: str, analysis_type: str = "diplomatic") -> Dict[str, Any]:
+        """Analyze news text for diplomatic intelligence"""
+        start_time = time.time()
+        
+        try:
+            print(f"[OpenAI] Making news analysis request to GPT-4o")
+            print(f"[OpenAI] Text length: {len(text)} characters")
+            
+            response = self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """You are a senior diplomatic intelligence analyst. Analyze the provided text and provide comprehensive diplomatic intelligence including:
+
+1. A diplomatic overview of the situation
+2. Risk level assessment (low/medium/high/critical)
+3. Strategic recommendations for diplomatic response
+4. Key entities, countries, or organizations mentioned
+5. Sentiment analysis with confidence score
+6. Geopolitical implications
+
+Return your analysis in valid JSON format with the following structure:
+{
+  "diplomatic_overview": "Brief overview of the diplomatic situation",
+  "risk_level": "low|medium|high|critical",
+  "strategic_recommendations": ["recommendation 1", "recommendation 2"],
+  "key_entities": ["entity 1", "entity 2"],
+  "sentiment_analysis": {
+    "overall_sentiment": "positive|negative|neutral",
+    "confidence": 0.85
+  },
+  "geopolitical_implications": ["implication 1", "implication 2"]
+}"""
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Analyze this text for diplomatic intelligence:\n\n{text}"
+                    }
+                ],
+                response_format={"type": "json_object"}
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            print(f"[OpenAI] News analysis completed successfully")
+            print(f"[OpenAI] Usage: {response.usage}")
+            
+            # Log usage with simple tracker
+            end_time = time.time()
+            response_time_ms = (end_time - start_time) * 1000
+            tokens = response.usage.total_tokens
+            cost = simple_usage_tracker.estimate_openai_cost("gpt-4o", tokens)
+            
+            simple_usage_tracker.log_request(
+                service="openai_news_analysis",
+                model="gpt-4o",
+                tokens=tokens,
+                cost=cost,
+                response_time_ms=response_time_ms,
+                meeting_id="news_analysis"
+            )
+            
+            return result
+            
+        except Exception as e:
+            print(f"Error in news analysis: {e}")
+            # Log error
+            end_time = time.time()
+            response_time_ms = (end_time - start_time) * 1000
+            
+            simple_usage_tracker.log_request(
+                service="openai_news_analysis",
+                model="gpt-4o",
+                tokens=0,
+                cost=0.0,
+                response_time_ms=response_time_ms,
+                meeting_id="news_analysis",
+                error=str(e)
+            )
+            return {"error": str(e)}

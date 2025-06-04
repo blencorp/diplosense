@@ -345,6 +345,42 @@ async def analyze_video_url(request: dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/analyze/news")
+async def analyze_news(request: dict):
+    """Analyze news text for diplomatic intelligence"""
+    try:
+        text = request.get("text", "")
+        analysis_type = request.get("analysis_type", "diplomatic")
+        
+        if not text:
+            raise HTTPException(status_code=400, detail="text is required")
+        
+        if len(text.strip()) < 50:
+            raise HTTPException(status_code=400, detail="Text must be at least 50 characters long for meaningful analysis")
+        
+        print(f"[NEWS ANALYSIS] Starting analysis for {len(text)} characters of text")
+        
+        # Use OpenAI to analyze the text for diplomatic intelligence
+        analysis = await openai_service.analyze_news_text(text, analysis_type)
+        
+        # Structure the response
+        result = {
+            "text_length": len(text),
+            "analysis_type": analysis_type,
+            "analysis": analysis,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        print(f"[NEWS ANALYSIS] Analysis completed successfully")
+        
+        return JSONResponse(content=result)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[NEWS ANALYSIS] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/analyze/audio")
 async def analyze_audio(
     audio_file: UploadFile = File(...),
