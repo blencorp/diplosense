@@ -193,40 +193,42 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
             )}
           </div>
 
-          {/* URL Input Option */}
-          <div className="border-t pt-4">
-            <label className="block text-xs text-gray-600 mb-2">
-              <Link className="inline w-3 h-3 mr-1" />
-              Or Analyze Video from URL
-            </label>
-            <div className="space-y-3">
-              <input
-                type="url"
-                placeholder="https://vimeo.com/123456789 or direct video file URL"
-                value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm md:text-base transition-all duration-200 bg-white hover:border-gray-400"
-              />
-              <button
-                onClick={() => videoUrl && handleUrlAnalysis(videoUrl)}
-                disabled={!videoUrl.trim() || loading.url}
-                className="w-full px-4 py-3 bg-blue-600 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 font-medium text-sm md:text-base"
-              >
-                {loading.url ? (
-                  <div className="flex items-center justify-center space-x-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Analyzing URL...</span>
-                  </div>
-                ) : (
-                  'Analyze Video URL'
-                )}
-              </button>
-              <p className="text-xs text-gray-500">
-                <strong>Recommended:</strong> Vimeo videos, direct .mp4/.avi/.mov file URLs<br/>
-                <strong>Note:</strong> YouTube may block automated downloads due to policy restrictions
-              </p>
+          {/* URL Input Option - Hidden for now */}
+          {false && (
+            <div className="border-t pt-4">
+              <label className="block text-xs text-gray-600 mb-2">
+                <Link className="inline w-3 h-3 mr-1" />
+                Or Analyze Video from URL
+              </label>
+              <div className="space-y-3">
+                <input
+                  type="url"
+                  placeholder="https://vimeo.com/123456789 or direct video file URL"
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm md:text-base transition-all duration-200 bg-white hover:border-gray-400"
+                />
+                <button
+                  onClick={() => videoUrl && handleUrlAnalysis(videoUrl)}
+                  disabled={!videoUrl.trim() || loading.url}
+                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 font-medium text-sm md:text-base"
+                >
+                  {loading.url ? (
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Analyzing URL...</span>
+                    </div>
+                  ) : (
+                    'Analyze Video URL'
+                  )}
+                </button>
+                <p className="text-xs text-gray-500">
+                  <strong>Recommended:</strong> Vimeo videos, direct .mp4/.avi/.mov file URLs<br/>
+                  <strong>Note:</strong> YouTube may block automated downloads due to policy restrictions
+                </p>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* File Upload Option */}
           <div className="border-t pt-4">
