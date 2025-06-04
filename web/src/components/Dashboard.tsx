@@ -120,6 +120,51 @@ const Dashboard: React.FC<DashboardProps> = ({
       return cables[cables.length - 1].data
     }
     
+    // Check for facial analysis data to calculate risk based on emotions
+    const facialAnalysis = analysisData.filter(item => item.type === 'facial_analysis')
+    if (facialAnalysis.length > 0) {
+      const latest = facialAnalysis[facialAnalysis.length - 1].data
+      
+      // Calculate risk level based on facial emotions
+      let riskLevel = 'Low'
+      if (latest.emotions && Array.isArray(latest.emotions)) {
+        const highStressEmotions = ['angry', 'fear', 'disgust', 'stressed', 'frustrated', 'worried', 'anxious', 'tense']
+        const moderateStressEmotions = ['sad', 'confused', 'surprised', 'concerned']
+        
+        let highStressScore = 0
+        let moderateStressScore = 0
+        
+        latest.emotions.forEach((emo: any) => {
+          if (emo.emotion && emo.confidence !== undefined) {
+            if (highStressEmotions.includes(emo.emotion.toLowerCase())) {
+              highStressScore += emo.confidence
+            } else if (moderateStressEmotions.includes(emo.emotion.toLowerCase())) {
+              moderateStressScore += emo.confidence
+            }
+          }
+        })
+        
+        if (highStressScore > 0.6) {
+          riskLevel = 'High'
+        } else if (highStressScore > 0.3 || moderateStressScore > 0.5) {
+          riskLevel = 'Medium'
+        }
+      }
+      
+      return {
+        executive_summary: 'Analysis based on facial expression detection and behavioral patterns',
+        risk_assessment: {
+          risk_level: riskLevel,
+          recommendations: riskLevel === 'High' ? ['Consider de-escalation strategies', 'Monitor for further stress indicators'] :
+                          riskLevel === 'Medium' ? ['Continue monitoring situation', 'Be prepared for tension changes'] :
+                          ['Situation appears stable', 'Maintain current approach']
+        },
+        cultural_analysis: {
+          cultural_insights: latest
+        }
+      }
+    }
+    
     // Fallback to demo analysis for risk assessment
     const demoAnalysis = analysisData.filter(item => item.type === 'demo_analysis')
     if (demoAnalysis.length > 0) {
@@ -255,9 +300,9 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* Emotion Timeline */}
+      {/* Sentiment Analysis Timeline */}
       <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Negotiation Temperature</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Sentiment Analysis</h3>
         <NoSSR fallback={<div className="h-[300px] flex items-center justify-center text-gray-500">Loading chart...</div>}>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={emotionData}>
