@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, ChangeEvent } from 'react'
-import { Upload, Video, FileText } from 'lucide-react'
+import { Upload, Video, FileText, Link } from 'lucide-react'
 
 interface AnalysisData {
   type: string
@@ -29,6 +29,7 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
 }) => {
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [selectedDemoVideo, setSelectedDemoVideo] = useState<string>('')
+  const [videoUrl, setVideoUrl] = useState<string>('')
   const [loading, setLoading] = useState<Record<string, boolean>>({})
 
   const API_BASE = '/api/v1'
@@ -87,6 +88,61 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
     }
   }
 
+  const handleUrlAnalysis = async (url: string) => {
+    setLoading((prev: Record<string, boolean>) => ({ ...prev, url: true }))
+    onAnalysisStart?.()
+
+    try {
+      // Validate URL
+      try {
+        new URL(url)
+      } catch {
+        throw new Error('Please enter a valid URL')
+      }
+
+      const response = await fetch(`${API_BASE}/analyze/video-url`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          video_url: url,
+          meeting_id: meetingId
+        }),
+        signal: AbortSignal.timeout(300000), // 5 minute timeout for URL analysis
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Failed to analyze video URL: ${response.status} - ${errorText}`)
+      }
+
+      const result = await response.json()
+      
+      // Set the video URL for the player
+      onVideoSelected?.(url)
+      
+      onAnalysisComplete({
+        type: 'video_url_analysis',
+        meeting_id: meetingId,
+        data: result.analysis,
+        timestamp: new Date().toISOString()
+      })
+
+      // Don't clear the URL on success so user can see what was analyzed
+      
+    } catch (error) {
+      console.error('Error analyzing video URL:', error)
+      if (error instanceof Error && error.name === 'TimeoutError') {
+        alert('Video URL analysis is taking longer than expected, but real-time updates will continue to appear in the dashboard.')
+      } else {
+        alert(error instanceof Error ? error.message : 'Error analyzing video URL. Please try again.')
+      }
+    } finally {
+      setLoading((prev: Record<string, boolean>) => ({ ...prev, url: false }))
+    }
+  }
+
 
 
 
@@ -135,6 +191,41 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* URL Input Option */}
+          <div className="border-t pt-4">
+            <label className="block text-xs text-gray-600 mb-2">
+              <Link className="inline w-3 h-3 mr-1" />
+              Or Analyze Video from URL
+            </label>
+            <div className="space-y-3">
+              <input
+                type="url"
+                placeholder="https://vimeo.com/123456789 or direct video file URL"
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm md:text-base transition-all duration-200 bg-white hover:border-gray-400"
+              />
+              <button
+                onClick={() => videoUrl && handleUrlAnalysis(videoUrl)}
+                disabled={!videoUrl.trim() || loading.url}
+                className="w-full px-4 py-3 bg-blue-600 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 font-medium text-sm md:text-base"
+              >
+                {loading.url ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Analyzing URL...</span>
+                  </div>
+                ) : (
+                  'Analyze Video URL'
+                )}
+              </button>
+              <p className="text-xs text-gray-500">
+                <strong>Recommended:</strong> Vimeo videos, direct .mp4/.avi/.mov file URLs<br/>
+                <strong>Note:</strong> YouTube may block automated downloads due to policy restrictions
+              </p>
+            </div>
           </div>
 
           {/* File Upload Option */}

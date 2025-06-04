@@ -12,3 +12,4 @@ pydantic==2.5.0
 aiofiles==23.2.1
 sqlalchemy==2.0.23
 psycopg2-binary==2.9.9
+yt-dlp==2023.12.30

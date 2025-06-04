@@ -157,6 +157,194 @@ async def generate_cable(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/analyze/video-url")
+async def analyze_video_url(request: dict):
+    """Analyze video from URL (YouTube, Vimeo, direct video files)"""
+    try:
+        video_url = request.get("video_url", "")
+        meeting_id = request.get("meeting_id", "url-analysis")
+        
+        if not video_url:
+            raise HTTPException(status_code=400, detail="video_url is required")
+        
+        print(f"[URL ANALYSIS] Starting analysis for URL: {video_url}")
+        
+        # Import yt-dlp for video downloading
+        try:
+            import yt_dlp
+        except ImportError:
+            raise HTTPException(status_code=500, detail="yt-dlp not installed. Please install yt-dlp for URL video analysis.")
+        
+        # Create temporary directory for video download
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_video_path = None
+            
+            try:
+                # Check if this is a direct video file URL
+                is_direct_video = any(video_url.lower().endswith(ext) for ext in ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.m4v'])
+                
+                if is_direct_video:
+                    print(f"[URL ANALYSIS] Direct video URL detected, downloading directly...")
+                    # Use requests to download direct video files
+                    import requests
+                    
+                    try:
+                        response = requests.get(video_url, stream=True, verify=False, timeout=30)
+                        response.raise_for_status()
+                        
+                        # Determine file extension from URL
+                        file_ext = video_url.split('.')[-1].lower()
+                        temp_video_path = os.path.join(temp_dir, f'video.{file_ext}')
+                        
+                        with open(temp_video_path, 'wb') as f:
+                            for chunk in response.iter_content(chunk_size=8192):
+                                f.write(chunk)
+                        
+                        print(f"[URL ANALYSIS] Direct video downloaded successfully")
+                        video_title = video_url.split('/')[-1]
+                        
+                    except Exception as e:
+                        print(f"[URL ANALYSIS] Direct download failed: {str(e)}")
+                        raise HTTPException(status_code=400, detail=f"Failed to download video file directly: {str(e)}")
+                else:
+                    # Configure yt-dlp options with better compatibility
+                    ydl_opts = {
+                        'outtmpl': os.path.join(temp_dir, 'video.%(ext)s'),
+                        'format': 'best[height<=720]/best',  # Limit to 720p for faster processing
+                        'quiet': True,  # Reduce noise in logs
+                        'no_warnings': True,
+                        'extractaudio': False,
+                        'writesubtitles': False,
+                        'writeautomaticsub': False,
+                        'ignoreerrors': True,
+                        # Add user agent and other headers to avoid 403 errors
+                        'http_headers': {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                        },
+                        # SSL and certificate options
+                        'nocheckcertificate': True,
+                        'prefer_insecure': True,  # Try insecure connections first
+                        'youtube_include_dash_manifest': False,
+                        # Additional retry options
+                        'retries': 3,
+                        'fragment_retries': 3,
+                    }
+                    
+                    # First, try to extract info without downloading to validate URL
+                    print(f"[URL ANALYSIS] Extracting video info...")
+                    with yt_dlp.YoutubeDL({'quiet': True, 'nocheckcertificate': True}) as ydl:
+                        try:
+                            info_check = ydl.extract_info(video_url, download=False)
+                            if info_check is None:
+                                raise HTTPException(status_code=400, detail="Unable to extract video information. The URL may be invalid, private, or not supported.")
+                            print(f"[URL ANALYSIS] Video info extracted successfully: {info_check.get('title', 'Unknown')}")
+                        except Exception as e:
+                            print(f"[URL ANALYSIS] Info extraction failed: {str(e)}")
+                            raise HTTPException(status_code=400, detail=f"Unable to access video. Error: {str(e)}")
+                    
+                    # Download video
+                    print(f"[URL ANALYSIS] Starting video download...")
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        info = ydl.extract_info(video_url, download=True)
+                        
+                        # Check if info extraction was successful
+                        if info is None:
+                            raise HTTPException(status_code=400, detail="Failed to extract video information during download.")
+                        
+                        video_title = info.get('title', 'Unknown Video') if isinstance(info, dict) else 'Unknown Video'
+                        print(f"[URL ANALYSIS] Video downloaded: {video_title}")
+                        
+                        # Find the downloaded file
+                        for file in os.listdir(temp_dir):
+                            if file.startswith('video.'):
+                                temp_video_path = os.path.join(temp_dir, file)
+                                break
+                
+                if not temp_video_path or not os.path.exists(temp_video_path):
+                    # Check what files were actually created
+                    created_files = os.listdir(temp_dir) if os.path.exists(temp_dir) else []
+                    print(f"[URL ANALYSIS] No video file found. Created files: {created_files}")
+                    raise HTTPException(status_code=400, detail=f"Failed to download video from URL. No video file was created. This may be due to: 1) Invalid URL, 2) Video access restrictions, 3) Unsupported format.")
+                
+                # Analyze the downloaded video
+                cap = cv2.VideoCapture(temp_video_path)
+                if not cap.isOpened():
+                    raise HTTPException(status_code=400, detail="Could not open downloaded video file")
+                
+                total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                frame_interval = max(1, total_frames // 10)  # Analyze up to 10 frames
+                
+                results = []
+                for i in range(0, total_frames, frame_interval):
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, i)
+                    ret, frame = cap.read()
+                    if not ret:
+                        continue
+                    
+                    _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 95])
+                    analysis = await openai_service.analyze_facial_expressions(buffer.tobytes())
+                    
+                    frame_result = {
+                        "frame": i, 
+                        "analysis": analysis,
+                        "timestamp": i / cap.get(cv2.CAP_PROP_FPS) if cap.get(cv2.CAP_PROP_FPS) > 0 else i
+                    }
+                    results.append(frame_result)
+                    
+                    # Send partial result via WebSocket
+                    await manager.broadcast(json.dumps({
+                        "type": "facial_analysis_update",
+                        "meeting_id": meeting_id,
+                        "data": analysis,
+                        "frame": i,
+                        "video_url": video_url,
+                        "video_title": video_title,
+                        "timestamp": datetime.now().isoformat()
+                    }))
+                    await asyncio.sleep(0.1)  # Small delay to avoid flooding
+                
+                cap.release()
+                
+                # Send final summary
+                await manager.broadcast(json.dumps({
+                    "type": "video_url_analysis_complete",
+                    "meeting_id": meeting_id,
+                    "data": {
+                        "results": results,
+                        "video_url": video_url,
+                        "video_title": video_title,
+                        "total_frames": total_frames
+                    },
+                    "timestamp": datetime.now().isoformat()
+                }))
+                
+                return JSONResponse(content={
+                    "meeting_id": meeting_id,
+                    "video_url": video_url,
+                    "video_title": video_title,
+                    "analysis": results,
+                    "total_frames": total_frames,
+                    "timestamp": datetime.now().isoformat()
+                })
+                
+            except Exception as e:
+                error_msg = str(e).lower()
+                if any(x in error_msg for x in ["403", "forbidden", "blocked"]):
+                    raise HTTPException(status_code=400, detail="Video access denied. This may be due to: 1) Geographic restrictions, 2) Age restrictions, 3) Private video, or 4) Platform anti-bot protection. Try a different video URL or use direct video file links.")
+                elif any(x in error_msg for x in ["unsupported url", "unable to extract", "not available"]):
+                    raise HTTPException(status_code=400, detail=f"Unsupported video URL or video not accessible. Supported platforms: YouTube, Vimeo, and direct video file URLs. Error: {str(e)}")
+                elif "404" in error_msg or "not found" in error_msg:
+                    raise HTTPException(status_code=400, detail="Video not found. Please check the URL and try again.")
+                elif "network" in error_msg or "timeout" in error_msg:
+                    raise HTTPException(status_code=400, detail="Network error while downloading video. Please check your connection and try again.")
+                else:
+                    raise HTTPException(status_code=500, detail=f"Error processing video: {str(e)}")
+                    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/analyze/audio")
 async def analyze_audio(
     audio_file: UploadFile = File(...),
