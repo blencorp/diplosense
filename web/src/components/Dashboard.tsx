@@ -44,6 +44,11 @@ const Dashboard: React.FC<DashboardProps> = ({
       if (item.type === 'audio_analysis' && item.data.emotion_score !== undefined) {
         emotion = item.data.emotion_score
         stress = item.data.stress_level || 0
+      } else if (item.type === 'audio_analysis' && item.data.emotion_analysis) {
+        // Handle audio analysis with translation support
+        const emotionAnalysis = item.data.emotion_analysis
+        emotion = emotionAnalysis.emotion_score || 0
+        stress = emotionAnalysis.stress_level || 0
       } else if (item.type === 'facial_analysis') {
         if (item.data.emotions && Array.isArray(item.data.emotions)) {
           const emotions = item.data.emotions
@@ -113,6 +118,70 @@ const Dashboard: React.FC<DashboardProps> = ({
     })) || []
   }, [analysisData])
 
+  // Function to analyze transcript content for risk indicators
+  const analyzeTranscriptRisk = (transcript: string): { level: string, reasons: string[] } => {
+    if (!transcript || transcript.trim().length === 0) {
+      return { level: 'Low', reasons: ['No transcript available'] }
+    }
+    
+    const text = transcript.toLowerCase()
+    let riskScore = 0
+    const reasons: string[] = []
+    
+    // High-risk keywords and phrases
+    const highRiskIndicators = [
+      { words: ['threat', 'threaten', 'warning', 'consequences'], weight: 3, reason: 'Threats detected' },
+      { words: ['reject', 'refuse', 'unacceptable', 'impossible'], weight: 2, reason: 'Strong rejection language' },
+      { words: ['sanctions', 'retaliation', 'punishment'], weight: 3, reason: 'Punitive measures mentioned' },
+      { words: ['withdraw', 'suspend', 'terminate'], weight: 2, reason: 'Withdrawal language' },
+      { words: ['deadline', 'ultimatum', 'final'], weight: 2, reason: 'Time pressure language' },
+      { words: ['escalate', 'escalation', 'military'], weight: 3, reason: 'Escalation indicators' },
+      { words: ['angry', 'furious', 'outraged'], weight: 2, reason: 'Strong emotional language' },
+      { words: ['war', 'conflict', 'hostilities'], weight: 3, reason: 'Conflict terminology' }
+    ]
+    
+    // Medium-risk indicators
+    const mediumRiskIndicators = [
+      { words: ['concern', 'worried', 'troubled'], weight: 1, reason: 'Concerns expressed' },
+      { words: ['disagree', 'object', 'oppose'], weight: 1, reason: 'Opposition stated' },
+      { words: ['disappointed', 'frustrated'], weight: 1, reason: 'Negative emotions' },
+      { words: ['reconsider', 'review', 'reassess'], weight: 1, reason: 'Position uncertainty' },
+      { words: ['pressure', 'force', 'compel'], weight: 1, reason: 'Coercive language' },
+      { words: ['crisis', 'emergency', 'urgent'], weight: 2, reason: 'Crisis language' }
+    ]
+    
+    // Positive indicators (reduce risk)
+    const positiveIndicators = [
+      { words: ['cooperation', 'collaborate', 'partnership'], weight: -1, reason: 'Cooperative language' },
+      { words: ['agreement', 'consensus', 'understanding'], weight: -1, reason: 'Agreement indicators' },
+      { words: ['peaceful', 'diplomatic', 'constructive'], weight: -1, reason: 'Positive tone' },
+      { words: ['progress', 'solution', 'resolution'], weight: -1, reason: 'Solution-oriented' },
+      { words: ['appreciate', 'grateful', 'thank'], weight: -1, reason: 'Positive sentiment' }
+    ]
+    
+    // Check all indicators
+    const allIndicators = highRiskIndicators.concat(mediumRiskIndicators).concat(positiveIndicators)
+    allIndicators.forEach(indicator => {
+      const matches = indicator.words.filter(word => text.includes(word))
+      if (matches.length > 0) {
+        riskScore += indicator.weight * matches.length
+        if (indicator.weight > 0) {
+          reasons.push(`${indicator.reason} (${matches.join(', ')})`)
+        }
+      }
+    })
+    
+    // Calculate final risk level
+    let level = 'Low'
+    if (riskScore >= 6) {
+      level = 'High'
+    } else if (riskScore >= 3) {
+      level = 'Medium'
+    }
+    
+    return { level, reasons: reasons.length > 0 ? reasons : ['Standard diplomatic communication'] }
+  }
+
   const latestCable = useMemo(() => {
     // Check for diplomatic cables first
     const cables = analysisData.filter(item => item.type === 'diplomatic_cable')
@@ -120,7 +189,118 @@ const Dashboard: React.FC<DashboardProps> = ({
       return cables[cables.length - 1].data
     }
     
-    // Check for facial analysis data to calculate risk based on emotions
+    // Collect all transcripts for comprehensive risk analysis
+    const allTranscripts: string[] = []
+    
+    // Check for audio analysis data first (includes translation-based risk assessment)
+    const audioAnalysis = analysisData.filter(item => item.type === 'audio_analysis')
+    if (audioAnalysis.length > 0) {
+      const latest = audioAnalysis[audioAnalysis.length - 1].data
+      
+      // Collect all transcripts from audio analysis
+      audioAnalysis.forEach(item => {
+        if (item.data.transcript) {
+          allTranscripts.push(item.data.transcript)
+        }
+        if (item.data.original_transcript && item.data.original_transcript !== item.data.transcript) {
+          allTranscripts.push(item.data.original_transcript)
+        }
+      })
+      
+      // Analyze transcript content for risk
+      const combinedTranscript = allTranscripts.join(' ')
+      const transcriptRiskAnalysis = analyzeTranscriptRisk(combinedTranscript)
+      
+      // Use diplomatic risk level from emotion analysis if available, otherwise use transcript-based risk
+      let riskLevel = transcriptRiskAnalysis.level
+      let riskReasons = transcriptRiskAnalysis.reasons
+      
+      if (latest.emotion_analysis && latest.emotion_analysis.diplomatic_risk_level) {
+        const emotionRisk = latest.emotion_analysis.diplomatic_risk_level
+        const emotionRiskCapitalized = emotionRisk.charAt(0).toUpperCase() + emotionRisk.slice(1)
+        
+        // Combine emotion-based and transcript-based risk (take the higher one)
+        const riskLevels = { 'Low': 1, 'Medium': 2, 'High': 3 }
+        const emotionRiskValue = riskLevels[emotionRiskCapitalized as keyof typeof riskLevels] || 1
+        const transcriptRiskValue = riskLevels[transcriptRiskAnalysis.level as keyof typeof riskLevels] || 1
+        
+        if (emotionRiskValue >= transcriptRiskValue) {
+          riskLevel = emotionRiskCapitalized
+          riskReasons = ['Emotional analysis indicates elevated risk', ...riskReasons]
+        } else {
+          riskReasons = ['Transcript content analysis indicates elevated risk', ...riskReasons]
+        }
+      } else if (latest.emotion_analysis) {
+        // Fallback calculation based on emotion and stress scores combined with transcript analysis
+        const emotionScore = latest.emotion_analysis.emotion_score || 0
+        const stressLevel = latest.emotion_analysis.stress_level || 0
+        
+        let emotionRisk = 'Low'
+        if (stressLevel > 0.7 || emotionScore < -0.5) {
+          emotionRisk = 'High'
+        } else if (stressLevel > 0.4 || emotionScore < -0.2) {
+          emotionRisk = 'Medium'
+        }
+        
+        // Combine emotion-based and transcript-based risk
+        const riskLevels = { 'Low': 1, 'Medium': 2, 'High': 3 }
+        const emotionRiskValue = riskLevels[emotionRisk as keyof typeof riskLevels] || 1
+        const transcriptRiskValue = riskLevels[transcriptRiskAnalysis.level as keyof typeof riskLevels] || 1
+        
+        if (emotionRiskValue >= transcriptRiskValue) {
+          riskLevel = emotionRisk
+          riskReasons = [`Emotional tone analysis (stress: ${(stressLevel * 100).toFixed(0)}%, emotion: ${emotionScore.toFixed(2)})`, ...riskReasons]
+        }
+      }
+      
+      const isTranslated = latest.is_translated
+      const detectedLanguage = latest.detected_language
+      
+      // Generate recommendations based on risk level and reasons
+      let recommendations: string[] = []
+      if (riskLevel === 'High') {
+        recommendations = [
+          'Immediate diplomatic intervention may be needed',
+          'Monitor for escalation signs',
+          'Consider cultural mediation',
+          'Review recent statements for inflammatory language'
+        ]
+      } else if (riskLevel === 'Medium') {
+        recommendations = [
+          'Continue monitoring dialogue tone',
+          'Be prepared for tension changes',
+          'Maintain diplomatic protocols',
+          'Consider clarifying any concerning statements'
+        ]
+      } else {
+        recommendations = [
+          'Communication appears constructive',
+          'Continue current diplomatic approach',
+          'Maintain positive momentum'
+        ]
+      }
+      
+      return {
+        executive_summary: isTranslated ? 
+          `Analysis based on translated speech from ${detectedLanguage} with real-time transcript and emotional assessment` :
+          'Analysis based on real-time speech content and emotional tone assessment',
+        risk_assessment: {
+          risk_level: riskLevel,
+          recommendations,
+          risk_factors: riskReasons,
+          transcript_based: true
+        },
+        cultural_analysis: {
+          cultural_insights: {
+            ...latest,
+            translation_note: isTranslated ? `Original language detected: ${detectedLanguage}` : null,
+            transcript_analysis: `Analyzed ${allTranscripts.length} transcript segments for risk indicators`
+          }
+        }
+      }
+    }
+    
+    // Fallback to facial analysis data
     const facialAnalysis = analysisData.filter(item => item.type === 'facial_analysis')
     if (facialAnalysis.length > 0) {
       const latest = facialAnalysis[facialAnalysis.length - 1].data
@@ -360,6 +540,19 @@ const Dashboard: React.FC<DashboardProps> = ({
                       {latestCable.risk_assessment.risk_level}
                     </span>
                   </p>
+                  {latestCable.risk_assessment.risk_factors && latestCable.risk_assessment.transcript_based && (
+                    <div>
+                      <p className="font-medium text-sm text-gray-900">Risk Factors:</p>
+                      <ul className="list-disc list-inside text-sm text-gray-600 mt-1">
+                        {Array.isArray(latestCable.risk_assessment.risk_factors) 
+                          ? latestCable.risk_assessment.risk_factors.map((factor: string, idx: number) => (
+                              <li key={idx}>{factor}</li>
+                            ))
+                          : <li>{latestCable.risk_assessment.risk_factors}</li>
+                        }
+                      </ul>
+                    </div>
+                  )}
                   {latestCable.risk_assessment.recommendations && (
                     <div>
                       <p className="font-medium text-sm text-gray-900">Recommendations:</p>
@@ -381,8 +574,37 @@ const Dashboard: React.FC<DashboardProps> = ({
               <div>
                 <h4 className="font-medium text-gray-900">Cultural Context</h4>
                 <div className="mt-2 text-sm text-gray-600">
-                  {latestCable.cultural_analysis.cultural_insights && (
-                    <p>{JSON.stringify(latestCable.cultural_analysis.cultural_insights)}</p>
+                  {latestCable.cultural_analysis.cultural_insights ? (
+                    <div>
+                      {/* Handle translation note if present */}
+                      {latestCable.cultural_analysis.cultural_insights.translation_note && (
+                        <p className="mb-2 text-blue-600 font-medium">
+                          {latestCable.cultural_analysis.cultural_insights.translation_note}
+                        </p>
+                      )}
+                      
+                      {/* Display cultural insights safely */}
+                      {typeof latestCable.cultural_analysis.cultural_insights === 'object' ? (
+                        <div className="space-y-1">
+                          {latestCable.cultural_analysis.cultural_insights.detected_language && (
+                            <p><span className="font-medium">Language:</span> {latestCable.cultural_analysis.cultural_insights.detected_language}</p>
+                          )}
+                          {latestCable.cultural_analysis.cultural_insights.is_translated && (
+                            <p><span className="font-medium">Status:</span> Translated from foreign language</p>
+                          )}
+                          {latestCable.cultural_analysis.cultural_insights.transcript_analysis && (
+                            <p><span className="font-medium">Transcript Analysis:</span> {latestCable.cultural_analysis.cultural_insights.transcript_analysis}</p>
+                          )}
+                          {latestCable.cultural_analysis.cultural_insights.error && (
+                            <p className="text-red-600"><span className="font-medium">Note:</span> {latestCable.cultural_analysis.cultural_insights.error}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <p>{String(latestCable.cultural_analysis.cultural_insights)}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 italic">Cultural analysis in progress...</p>
                   )}
                 </div>
               </div>

@@ -120,11 +120,21 @@ export default function LiveAnalysisPage() {
           
           if (analysisUpdate.data && analysisUpdate.data.transcript) {
             const timeString = new Date().toLocaleTimeString()
-            const newSegment = `[${timeString}] ${analysisUpdate.data.transcript}`
+            const transcript = analysisUpdate.data.transcript
+            const originalTranscript = analysisUpdate.data.original_transcript
+            const detectedLanguage = analysisUpdate.data.detected_language
+            const isTranslated = analysisUpdate.data.is_translated
+            
+            let newSegment = `[${timeString}] ${transcript}`
+            
+            // If translated, show both original and translation
+            if (isTranslated && originalTranscript && originalTranscript !== transcript) {
+              newSegment = `[${timeString}] [${detectedLanguage?.toUpperCase()}] ${originalTranscript}\n[${timeString}] [EN] ${transcript}`
+            }
             
             setCurrentTranscript(prev => {
               // Avoid duplicate entries
-              if (prev.includes(analysisUpdate.data.transcript)) {
+              if (prev.includes(transcript)) {
                 return prev
               }
               return prev + (prev ? '\n' : '') + newSegment
@@ -477,11 +487,23 @@ export default function LiveAnalysisPage() {
         if (result.transcript) {
           console.log('Adding transcript to UI:', result.transcript)
           const timeString = new Date().toLocaleTimeString()
-          const newSegment = `[${timeString}] ${result.transcript}`
+          
+          // Handle translated transcripts
+          const transcript = result.transcript
+          const originalTranscript = result.analysis?.original_transcript
+          const detectedLanguage = result.analysis?.detected_language
+          const isTranslated = result.analysis?.is_translated
+          
+          let newSegment = `[${timeString}] ${transcript}`
+          
+          // If translated, show both original and translation
+          if (isTranslated && originalTranscript && originalTranscript !== transcript) {
+            newSegment = `[${timeString}] [${detectedLanguage?.toUpperCase()}] ${originalTranscript}\n[${timeString}] [EN] ${transcript}`
+          }
           
           setCurrentTranscript(prev => {
             // Avoid duplicate entries
-            if (prev.includes(result.transcript)) {
+            if (prev.includes(transcript)) {
               return prev
             }
             const newTranscript = prev + (prev ? '\n' : '') + newSegment

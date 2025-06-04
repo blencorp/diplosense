@@ -16,35 +16,59 @@ class OpenAIService:
         self.client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
 
     async def analyze_audio_emotion(self, audio_data: bytes) -> Dict[str, Any]:
-        """Analyze emotional tone from audio using OpenAI"""
+        """Analyze emotional tone from audio using OpenAI with translation support"""
         try:
-            # Transcribe audio first
-            audio_file = io.BytesIO(audio_data)
-            audio_file.name = "audio.wav"
+            # Transcribe audio first with language detection and translation
+            transcription_result = await self.transcribe_audio(audio_data, "emotion_analysis")
             
-            transcript = self.client.audio.transcriptions.create(
-                model="whisper-1",
-                file=audio_file
-            )
+            # Use English translation for emotion analysis
+            text_to_analyze = transcription_result.get("english_translation", "")
+            original_text = transcription_result.get("original_text", "")
+            detected_language = transcription_result.get("detected_language", "unknown")
+            is_translated = transcription_result.get("is_translated", False)
             
-            # Analyze emotion from transcript
+            if not text_to_analyze:
+                return {"error": "No text to analyze from audio"}
+            
+            # Analyze emotion from transcript (using English version)
             response = self.client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an expert in diplomatic communication analysis. Analyze the emotional tone, stress level, and overall sentiment of the following transcript. Return a JSON response with emotion_score (-1 to 1), stress_level (0 to 1), tone (calm/neutral/tense/aggressive), and detected_emotions (list)."
+                        "content": "You are an expert in diplomatic communication analysis. Analyze the emotional tone, stress level, and overall sentiment of the following transcript. Return a JSON response with emotion_score (-1 to 1), stress_level (0 to 1), tone (calm/neutral/tense/aggressive), detected_emotions (list), and diplomatic_risk_level (low/medium/high)."
                     },
                     {
                         "role": "user",
-                        "content": f"Analyze this diplomatic transcript: {transcript.text}"
+                        "content": f"Analyze this diplomatic transcript: {text_to_analyze}"
                     }
                 ],
                 response_format={"type": "json_object"}
             )
             
-            result = json.loads(response.choices[0].message.content)
-            result["transcript"] = transcript.text
+            # Safe JSON parsing
+            try:
+                result = json.loads(response.choices[0].message.content) if response.choices[0].message.content else {}
+            except (json.JSONDecodeError, TypeError) as e:
+                print(f"[EMOTION ANALYSIS] Error parsing JSON: {e}")
+                result = {
+                    "emotion_score": 0,
+                    "stress_level": 0,
+                    "tone": "unknown",
+                    "detected_emotions": [],
+                    "diplomatic_risk_level": "unknown",
+                    "error": f"JSON parsing failed: {str(e)}"
+                }
+            
+            # Include transcription details
+            result["transcript"] = text_to_analyze  # English version for compatibility
+            result["original_transcript"] = original_text
+            result["detected_language"] = detected_language
+            result["is_translated"] = is_translated
+            
+            if is_translated:
+                print(f"[EMOTION ANALYSIS] Analyzed translated text from {detected_language}: {text_to_analyze}")
+            
             return result
             
         except Exception as e:
@@ -91,7 +115,17 @@ class OpenAIService:
             
             response = self.client.chat.completions.create(**request_data)
             
-            result = json.loads(response.choices[0].message.content)
+            # Safe JSON parsing
+            try:
+                result = json.loads(response.choices[0].message.content) if response.choices[0].message.content else {}
+            except (json.JSONDecodeError, TypeError) as e:
+                print(f"[OpenAI] Error parsing facial analysis JSON: {e}")
+                result = {
+                    "emotions": [],
+                    "observable_behaviors": [],
+                    "overall_confidence_score": 0,
+                    "error": f"JSON parsing failed: {str(e)}"
+                }
             print(f"[OpenAI] Response received from GPT-4o Vision:")
             print(f"[OpenAI] Usage: {response.usage}")
             print(f"[OpenAI] Analysis result: {result}")
@@ -121,8 +155,8 @@ class OpenAIService:
             # )
             return {"error": str(e)}
 
-    async def transcribe_audio(self, audio_data: bytes, meeting_id: str = None) -> str:
-        """Transcribe audio using OpenAI Whisper"""
+    async def transcribe_audio(self, audio_data: bytes, meeting_id: str = None) -> Dict[str, Any]:
+        """Transcribe audio using OpenAI Whisper with automatic language detection and translation"""
         # Start usage tracking
         start_time = time.time()
         
@@ -136,25 +170,48 @@ class OpenAIService:
             audio_file = io.BytesIO(audio_data)
             audio_file.name = "audio.wav"
             
-            request_data = {
-                "model": "whisper-1",
-                "file": "[AUDIO_DATA]",
-                "response_format": "text"
-            }
-            
-            transcript = self.client.audio.transcriptions.create(
+            # First, transcribe with language detection
+            transcript_with_language = self.client.audio.transcriptions.create(
                 model="whisper-1",
                 file=audio_file,
-                response_format="text"
+                response_format="json"  # Changed to JSON to get language info
             )
             
-            print(f"[OpenAI] Whisper transcription result: {transcript}")
+            original_text = transcript_with_language.text
+            detected_language = transcript_with_language.language
+            
+            print(f"[OpenAI] Whisper detected language: {detected_language}")
+            print(f"[OpenAI] Original transcription: {original_text}")
+            
+            # If the detected language is not English, translate it
+            english_translation = original_text
+            if detected_language and detected_language.lower() != 'en' and detected_language.lower() != 'english':
+                print(f"[OpenAI] Non-English language detected, translating from {detected_language}")
+                
+                # Reset the audio file for translation
+                audio_file = io.BytesIO(audio_data)
+                audio_file.name = "audio.wav"
+                
+                try:
+                    translation_response = self.client.audio.translations.create(
+                        model="whisper-1",
+                        file=audio_file,
+                        response_format="text"
+                    )
+                    english_translation = translation_response
+                    print(f"[OpenAI] English translation: {english_translation}")
+                except Exception as translation_error:
+                    print(f"[OpenAI] Translation failed, using original text: {translation_error}")
+                    english_translation = original_text
             
             # Log usage with simple tracker
             end_time = time.time()
             response_time_ms = (end_time - start_time) * 1000
             # Estimate tokens for Whisper (audio duration based)
-            estimated_tokens = max(10, len(transcript.split()) * 1.3) if transcript else 10
+            estimated_tokens = max(10, len(original_text.split()) * 1.3) if original_text else 10
+            if english_translation != original_text:
+                estimated_tokens += max(10, len(english_translation.split()) * 1.3)  # Add translation tokens
+            
             cost = simple_usage_tracker.estimate_openai_cost("whisper-1", int(estimated_tokens))
             
             simple_usage_tracker.log_request(
@@ -166,7 +223,12 @@ class OpenAIService:
                 meeting_id=meeting_id
             )
             
-            return transcript
+            return {
+                "original_text": original_text,
+                "english_translation": english_translation,
+                "detected_language": detected_language,
+                "is_translated": detected_language and detected_language.lower() != 'en'
+            }
             
         except Exception as e:
             print(f"Error in audio transcription: {e}")
@@ -183,7 +245,12 @@ class OpenAIService:
                 meeting_id=meeting_id,
                 error=str(e)
             )
-            return ""
+            return {
+                "original_text": "",
+                "english_translation": "",
+                "detected_language": "unknown",
+                "is_translated": False
+            }
 
     async def analyze_text_sentiment(self, text: str, cultures: List[str] = []) -> Dict[str, Any]:
         """Analyze text sentiment and cultural context"""
@@ -275,11 +342,23 @@ class OpenAIService:
                 response_format={"type": "json_object"}
             )
             
-            # Combine results
+            # Combine results with safe JSON parsing
+            try:
+                risk_assessment = json.loads(risk_response.choices[0].message.content) if risk_response.choices[0].message.content else {}
+            except (json.JSONDecodeError, TypeError) as e:
+                print(f"Error parsing risk assessment JSON: {e}")
+                risk_assessment = {"risk_level": "Unknown", "recommendations": ["Unable to assess risk due to parsing error"]}
+            
+            try:
+                cultural_analysis = json.loads(cultural_response.choices[0].message.content) if cultural_response.choices[0].message.content else {}
+            except (json.JSONDecodeError, TypeError) as e:
+                print(f"Error parsing cultural analysis JSON: {e}")
+                cultural_analysis = {"cultural_insights": "Unable to parse cultural analysis", "error": str(e)}
+            
             cable = {
-                "executive_summary": summary_response.choices[0].message.content,
-                "risk_assessment": json.loads(risk_response.choices[0].message.content),
-                "cultural_analysis": json.loads(cultural_response.choices[0].message.content),
+                "executive_summary": summary_response.choices[0].message.content or "Analysis in progress",
+                "risk_assessment": risk_assessment,
+                "cultural_analysis": cultural_analysis,
                 "raw_analysis": analysis_data
             }
             
