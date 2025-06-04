@@ -55,17 +55,6 @@ const RecentActivity: React.FC<RecentActivityProps> = ({ analysisData }) => {
       <div className="bg-white p-6 rounded-lg shadow">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Recent Analysis Activity</h3>
-          <button 
-            onClick={() => {
-              console.log('Test button clicked')
-              if (analysisData.length > 0) {
-                openModal(analysisData[analysisData.length - 1])
-              }
-            }}
-            className="text-xs bg-blue-500 text-white px-2 py-1 rounded"
-          >
-            Test Modal
-          </button>
         </div>
         <div className="space-y-2">
           {analysisData.slice(-5).reverse().map((item, index) => (
