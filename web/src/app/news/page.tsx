@@ -129,7 +129,7 @@ export default function NewsAnalysisPage() {
                   value={newsText}
                   onChange={(e) => setNewsText(e.target.value)}
                   placeholder="Paste your news article, diplomatic statement, or any text you want to analyze for diplomatic intelligence..."
-                  className="w-full h-64 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="w-full h-64 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-900 bg-white placeholder-gray-500"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   {newsText.length} characters
