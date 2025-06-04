@@ -1,6 +1,16 @@
 # DiploSense - Real-Time Diplomatic Intelligence Platform
 
-A video-focused AI platform designed to support diplomats and policymakers during high-stakes negotiations by analyzing visual, textual, and cultural data in real time.
+A multimodal AI platform designed to support diplomats and policymakers during high-stakes negotiations by analyzing visual, textual, and cultural data in real time using advanced AI models.
+
+## Multimodal AI Capabilities
+
+DiploSense leverages cutting-edge AI models to provide comprehensive multimodal analysis:
+
+- **🎥 Vision Analysis**: OpenAI GPT-4o Vision API for facial expression detection, microexpression analysis, and body language interpretation
+- **🎤 Audio Processing**: OpenAI Whisper API for real-time speech transcription and audio analysis
+- **📝 Text Intelligence**: OpenAI GPT-4o for diplomatic text analysis, sentiment analysis, and cultural context understanding
+- **🤖 Multi-Agent Systems**: Coordinated AI agents for generating comprehensive diplomatic cables and risk assessments
+- **🌍 Cultural AI**: Custom cultural intelligence engine enhanced by GPT-4o for cross-cultural communication analysis
 
 ## Features
 
@@ -16,15 +26,19 @@ A video-focused AI platform designed to support diplomats and policymakers durin
 
 - **Frontend**: React + TypeScript + Tailwind CSS
 - **Backend**: FastAPI + Python
-- **AI/ML**: OpenAI GPT-4o, Whisper API
+- **AI/ML**: 
+  - OpenAI GPT-4o Vision (facial expression & body language analysis)
+  - OpenAI GPT-4o (text analysis, diplomatic intelligence, multi-agent reasoning)
+  - OpenAI Whisper (speech-to-text transcription)
 - **Database**: Supabase
 - **Real-time Communication**: WebSockets
+- **Infrastructure**: Docker Compose, Nginx
 
 ## Quick Start
 
 ### Prerequisites
 
-- Docker and Docker Compose
+- Docker and Docker Compose (v2.0+ recommended)
 - OpenAI API key
 - Supabase account (optional)
 
@@ -47,7 +61,7 @@ A video-focused AI platform designed to support diplomats and policymakers durin
    ```bash
    make up
    # OR
-   docker-compose up --build -d
+   docker compose up --build -d
    ```
 
 4. Access the application:
@@ -61,7 +75,7 @@ A video-focused AI platform designed to support diplomats and policymakers durin
    ```bash
    make logs
    # OR
-   docker-compose logs -f
+   docker compose logs -f
    ```
 
 6. Stop services:
@@ -69,7 +83,7 @@ A video-focused AI platform designed to support diplomats and policymakers durin
    ```bash
    make down
    # OR
-   docker-compose down
+   docker compose down
    ```
 
 ### Local Development Setup
