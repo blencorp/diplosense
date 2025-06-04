@@ -84,8 +84,8 @@ export default function NewsAnalysisPage() {
         <div className="container mx-auto">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">DiploSense News Analysis</h1>
-              <p className="text-blue-200">Diplomatic Intelligence from Text</p>
+              <h1 className="text-2xl font-bold">DiploSense</h1>
+              <p className="text-blue-200">Diplomatic Intelligence Analysis</p>
             </div>
             <nav className="flex gap-4">
               <a 

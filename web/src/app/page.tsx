@@ -63,11 +63,11 @@ export default function Home() {
       try {
         const analysisUpdate: AnalysisData = JSON.parse(event.data)
         console.log('WebSocket message received:', analysisUpdate.type, analysisUpdate)
-        
+
         let normalized = analysisUpdate
         if (analysisUpdate.type === "facial_analysis_update") {
           normalized = { ...analysisUpdate, type: "facial_analysis" }
-          
+
           // Update transcript with real analysis data
           if (normalized.data) {
             console.log('Updating transcript with data:', normalized.data)
@@ -114,7 +114,7 @@ export default function Home() {
     if (progress >= 1) {
       setIsAnalyzing(false)
     }
-    
+
     // Update transcript based on progress
     updateTranscript(progress)
   }
@@ -135,7 +135,7 @@ export default function Home() {
 
   const startVideoAnalysis = () => {
     if (analysisInterval) return // Already running
-    
+
     setIsAnalyzing(true)
     setAnalysisProgress(0)
     // Clear transcript when starting new analysis
@@ -145,7 +145,7 @@ export default function Home() {
     const interval = setInterval(async () => {
       progress += 0.05 // Update every 500ms with 5% progress
       setAnalysisProgress(progress)
-      
+
       // Transcript will be updated via WebSocket when real analysis data arrives
 
       // Trigger analysis API call
@@ -170,7 +170,7 @@ export default function Home() {
         stopVideoAnalysis()
       }
     }, 500)
-    
+
     setAnalysisInterval(interval)
   }
 
@@ -184,16 +184,16 @@ export default function Home() {
 
   const updateTranscript = (progress: number, analysisData?: any) => {
     console.log('updateTranscript called with:', { progress, analysisData })
-    
+
     // Use actual audio transcript from Whisper if available
     if (analysisData && analysisData.transcript) {
       try {
         const frameTime = analysisData.frame_time || 0
         const timeString = `${Math.floor(frameTime / 60)}:${Math.floor(frameTime % 60).toString().padStart(2, '0')}`
-        
+
         const newSegment = `[${timeString}] ${analysisData.transcript}`
         console.log('Generated transcript segment:', newSegment)
-        
+
         // Append to existing transcript
         setCurrentTranscript(prev => {
           // Avoid duplicate entries
@@ -231,32 +231,28 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold">DiploSense</h1>
-              <p className="text-blue-200">Real-Time Diplomatic Intelligence Platform</p>
+              <p className="text-blue-200">Diplomatic Intelligence Platform</p>
             </div>
             <nav className="flex gap-4">
-              <a 
-                href="/" 
+              <a
+                href="/"
                 className="px-4 py-2 bg-blue-800 rounded-md hover:bg-blue-700 transition-colors"
               >
                 Video Analysis
               </a>
-              <a 
-                href="/news" 
+              <a
+                href="/news"
                 className="px-4 py-2 bg-blue-700 rounded-md hover:bg-blue-600 transition-colors"
               >
                 News Analysis
               </a>
-              <a 
-                href="/admin/usage" 
+              <a
+                href="/admin/usage"
                 className="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500 transition-colors text-sm"
               >
                 Admin
               </a>
             </nav>
-          </div>
-          <div className="flex items-center gap-2 mt-2">
-            <div className={`w-2 h-2 rounded-full ${socketState.isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
-            <span className="text-sm">{socketState.isConnected ? 'Connected' : 'Disconnected'}</span>
           </div>
         </div>
       </header>
