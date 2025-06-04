@@ -659,6 +659,56 @@ async def analyze_live_camera(request: dict):
         print(f"Error in live camera analysis: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/demo/videos")
+async def get_demo_videos():
+    """Get available demo videos from the filesystem"""
+    try:
+        import os
+        import glob
+        
+        demo_video_path = "/demo-data/video"
+        video_extensions = ["*.mp4", "*.avi", "*.mov", "*.mkv", "*.webm", "*.m4v"]
+        
+        videos = []
+        
+        # Check if demo-data directory exists
+        if os.path.exists(demo_video_path):
+            for extension in video_extensions:
+                pattern = os.path.join(demo_video_path, extension)
+                matching_files = glob.glob(pattern)
+                
+                for file_path in matching_files:
+                    filename = os.path.basename(file_path)
+                    # Create a more user-friendly name
+                    display_name = filename.replace('_', ' ').replace('-', ' ').title()
+                    if display_name.lower().endswith('.mp4'):
+                        display_name = display_name[:-4]
+                    
+                    videos.append({
+                        "id": filename.replace('.', '_').replace(' ', '_').lower(),
+                        "name": display_name,
+                        "url": f"/demo-data/video/{filename}",
+                        "filename": filename
+                    })
+        
+        # Sort videos by name for consistent ordering
+        videos.sort(key=lambda x: x['name'])
+        
+        print(f"[DEMO VIDEOS] Found {len(videos)} demo videos")
+        for video in videos:
+            print(f"[DEMO VIDEOS] - {video['name']} ({video['filename']})")
+        
+        return JSONResponse(content={"videos": videos})
+        
+    except Exception as e:
+        print(f"[DEMO VIDEOS] Error fetching demo videos: {str(e)}")
+        # Return fallback videos if there's an error
+        fallback_videos = [
+            {"id": "sample1", "name": "Sample Video 1", "url": "/demo-data/video/sample1.mp4", "filename": "sample1.mp4"},
+            {"id": "sample2", "name": "Sample Video 2", "url": "/demo-data/video/sample2.mp4", "filename": "sample2.mp4"}
+        ]
+        return JSONResponse(content={"videos": fallback_videos})
+
 @router.post("/demo/analyze")
 async def demo_analyze(request: dict):
     """Demo analysis using sample diplomatic meeting video"""

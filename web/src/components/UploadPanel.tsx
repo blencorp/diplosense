@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, ChangeEvent } from 'react'
+import React, { useState, useEffect, ChangeEvent } from 'react'
 import { Upload, Video, FileText, Link } from 'lucide-react'
 
 interface AnalysisData {
@@ -31,14 +31,32 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
   const [selectedDemoVideo, setSelectedDemoVideo] = useState<string>('')
   const [videoUrl, setVideoUrl] = useState<string>('')
   const [loading, setLoading] = useState<Record<string, boolean>>({})
+  const [demoVideos, setDemoVideos] = useState<Array<{id: string, name: string, url: string, filename: string}>>([])
 
   const API_BASE = '/api/v1'
 
-  // Demo video options
-  const demoVideos = [
-    { id: 'nebenzya', name: 'Vasily Nebenzya UN Speech', url: '/demo-data/video/ambassador-vasily-nebenzya.mp4' },
-    { id: 'putin', name: 'Putin UN Speech', url: '/demo-data/video/putin.mp4' }
-  ]
+  // Fetch available demo videos on component mount
+  useEffect(() => {
+    const fetchDemoVideos = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/demo/videos`)
+        if (response.ok) {
+          const data = await response.json()
+          setDemoVideos(data.videos || [])
+        } else {
+          console.error('Failed to fetch demo videos:', response.status)
+          // Fallback to empty array if API fails
+          setDemoVideos([])
+        }
+      } catch (error) {
+        console.error('Error fetching demo videos:', error)
+        // Fallback to empty array if API fails
+        setDemoVideos([])
+      }
+    }
+
+    fetchDemoVideos()
+  }, [])
 
   const handleDemoVideoSelect = (videoUrl: string) => {
     setSelectedDemoVideo(videoUrl)
@@ -175,8 +193,11 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
               value={selectedDemoVideo}
               onChange={(e) => handleDemoVideoSelect(e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm md:text-base transition-all duration-200 bg-white hover:border-gray-400"
+              disabled={demoVideos.length === 0}
             >
-              <option value="">Choose a demo video...</option>
+              <option value="">
+                {demoVideos.length === 0 ? 'Loading demo videos...' : 'Choose a demo video...'}
+              </option>
               {demoVideos.map((video) => (
                 <option key={video.id} value={video.url}>
                   {video.name}
@@ -189,6 +210,11 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                   <p className="font-medium">Video selected. Play the video on the right to start real-time analysis.</p>
                 </div>
+              </div>
+            )}
+            {demoVideos.length === 0 && (
+              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-700">
+                <p>No demo videos found. You can still upload your own video files below.</p>
               </div>
             )}
           </div>
